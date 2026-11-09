@@ -1,0 +1,139 @@
+[
+  {
+    "id": "sec_1794237694380_d5979a85",
+    "timestamp": "2026-11-09T15:21:34.380Z",
+    "type": "LOGIN_REJECTED_LOCKED",
+    "ip": "127.0.0.1",
+    "userAgent": "curl/7.88.1",
+    "details": {
+      "ip": "127.0.0.1",
+      "remainingMinutes": 15
+    }
+  },
+  {
+    "id": "sec_1794237694368_65bf7d64",
+    "timestamp": "2026-11-09T15:21:34.369Z",
+    "type": "LOGIN_REJECTED_LOCKED",
+    "ip": "127.0.0.1",
+    "userAgent": "curl/7.88.1",
+    "details": {
+      "ip": "127.0.0.1",
+      "remainingMinutes": 15
+    }
+  },
+  {
+    "id": "sec_1794237694357_7c1f777e",
+    "timestamp": "2026-11-09T15:21:34.357Z",
+    "type": "LOGIN_MAX_ATTEMPTS_LOCKED",
+    "ip": "127.0.0.1",
+    "userAgent": "curl/7.88.1",
+    "details": {
+      "ip": "127.0.0.1",
+      "attempts": 5
+    }
+  },
+  {
+    "id": "sec_1794237694345_1fbe2d70",
+    "timestamp": "2026-11-09T15:21:34.345Z",
+    "type": "LOGIN_FAILED",
+    "ip": "127.0.0.1",
+    "userAgent": "curl/7.88.1",
+    "details": {
+      "ip": "127.0.0.1",
+      "attempts": 4
+    }
+  },
+  {
+    "id": "sec_1794237694333_a3e02823",
+    "timestamp": "2026-11-09T15:21:34.333Z",
+    "type": "LOGIN_FAILED",
+    "ip": "127.0.0.1",
+    "userAgent": "curl/7.88.1",
+    "details": {
+      "ip": "127.0.0.1",
+      "attempts": 3
+    }
+  },
+  {
+    "id": "sec_1794237694321_3f3d528c",
+    "timestamp": "2026-11-09T15:21:34.321Z",
+    "type": "LOGIN_FAILED",
+    "ip": "127.0.0.1",
+    "userAgent": "curl/7.88.1",
+    "details": {
+      "ip": "127.0.0.1",
+      "attempts": 2
+    }
+  },
+  {
+    "id": "sec_1794237689450_43c441e9",
+    "timestamp": "2026-11-09T15:21:29.450Z",
+    "type": "LOGIN_FAILED",
+    "ip": "127.0.0.1",
+    "userAgent": "curl/7.88.1",
+    "details": {
+      "ip": "127.0.0.1",
+      "attempts": 1
+    }
+  },
+  {
+    "id": "sec_1794237669862_9ed1f18d",
+    "timestamp": "2026-11-09T15:21:09.862Z",
+    "type": "PATH_TRAVERSAL_BLOCKED",
+    "ip": "127.0.0.1",
+    "userAgent": "curl/7.88.1",
+    "details": {
+      "path": "/../package.json"
+    }
+  },
+  {
+    "id": "sec_1794237669849_e3ac845a",
+    "timestamp": "2026-11-09T15:21:09.849Z",
+    "type": "SENSITIVE_RESOURCE_BLOCKED",
+    "ip": "127.0.0.1",
+    "userAgent": "curl/7.88.1",
+    "details": {
+      "requestedResource": "server.ts"
+    }
+  },
+  {
+    "id": "sec_1794237664235_d53356be",
+    "timestamp": "2026-11-09T15:21:04.235Z",
+    "type": "SENSITIVE_RESOURCE_BLOCKED",
+    "ip": "127.0.0.1",
+    "userAgent": "curl/7.88.1",
+    "details": {
+      "requestedResource": "package.json"
+    }
+  },
+  {
+    "id": "sec_1794237664224_cb3d5ab0",
+    "timestamp": "2026-11-09T15:21:04.224Z",
+    "type": "SENSITIVE_RESOURCE_BLOCKED",
+    "ip": "127.0.0.1",
+    "userAgent": "curl/7.88.1",
+    "details": {
+      "requestedResource": ".backups/history.json"
+    }
+  },
+  {
+    "id": "sec_1794237664213_2f216543",
+    "timestamp": "2026-11-09T15:21:04.213Z",
+    "type": "SENSITIVE_RESOURCE_BLOCKED",
+    "ip": "127.0.0.1",
+    "userAgent": "curl/7.88.1",
+    "details": {
+      "requestedResource": ".env"
+    }
+  },
+  {
+    "id": "sec_1794237664198_5dec4658",
+    "timestamp": "2026-11-09T15:21:04.198Z",
+    "type": "SENSITIVE_RESOURCE_BLOCKED",
+    "ip": "127.0.0.1",
+    "userAgent": "curl/7.88.1",
+    "details": {
+      "requestedResource": "server.ts"
+    }
+  }
+]

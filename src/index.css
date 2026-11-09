@@ -1,0 +1,59 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-serif: "Cinzel", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+/* Custom temporal booth aesthetic styles */
+@keyframes temporal-pulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes flash-shutter {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-temporal-pulse {
+  animation: temporal-pulse 4s ease-in-out infinite;
+}
+
+.animate-flash {
+  animation: flash-shutter 0.6s ease-out forwards;
+}
+
+/* Vintage film grain overlay */
+.vintage-grain {
+  background-image: radial-gradient(rgba(0, 0, 0, 0) 1px, rgba(0, 0, 0, 0.4) 1px);
+  background-size: 4px 4px;
+}
+
+/* Custom scrollbars for historical galleries */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(28, 25, 23, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(168, 85, 247, 0.3);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(217, 119, 6, 0.5);
+}
