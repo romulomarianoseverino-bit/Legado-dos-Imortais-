@@ -920,12 +920,15 @@
             </div>
 
             <!-- Navegação por Abas -->
-            <div class="grid grid-cols-2 gap-2 border-b border-slate-800 pb-2">
-                <button type="button" id="admin-tab-upload-btn" onclick="trocarAbaAdmin('upload')" class="py-2 text-xs font-cinzel font-bold rounded-xl border border-amber-400 bg-amber-500/20 text-amber-300 text-center cursor-pointer">
-                    📦 Enviar Atualizações
+            <div class="grid grid-cols-3 gap-1.5 sm:gap-2 border-b border-slate-800 pb-2">
+                <button type="button" id="admin-tab-upload-btn" onclick="trocarAbaAdmin('upload')" class="py-2 text-[10px] sm:text-xs font-cinzel font-bold rounded-xl border border-amber-400 bg-amber-500/20 text-amber-300 text-center cursor-pointer">
+                    📦 Atualizações
                 </button>
-                <button type="button" id="admin-tab-history-btn" onclick="trocarAbaAdmin('history')" class="py-2 text-xs font-cinzel font-bold rounded-xl border border-slate-800 bg-slate-950 text-slate-400 text-center cursor-pointer">
-                    📜 Histórico & Rollback
+                <button type="button" id="admin-tab-history-btn" onclick="trocarAbaAdmin('history')" class="py-2 text-[10px] sm:text-xs font-cinzel font-bold rounded-xl border border-slate-800 bg-slate-950 text-slate-400 text-center cursor-pointer">
+                    📜 Backups
+                </button>
+                <button type="button" id="admin-tab-logs-btn" onclick="trocarAbaAdmin('logs')" class="py-2 text-[10px] sm:text-xs font-cinzel font-bold rounded-xl border border-slate-800 bg-slate-950 text-slate-400 text-center cursor-pointer">
+                    🛡️ Auditoria
                 </button>
             </div>
 
@@ -982,6 +985,19 @@
                 </div>
                 <div id="admin-history-container" class="bg-slate-950 border border-slate-800 rounded-xl p-3 max-h-72 overflow-y-auto space-y-2 text-xs">
                     <p class="text-slate-500 text-center py-4">Carregando histórico...</p>
+                </div>
+            </div>
+
+            <!-- Conteúdo Aba 3: Auditoria & Logs de Segurança -->
+            <div id="admin-tab-logs-content" class="hidden space-y-3 font-sans">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-cinzel text-amber-300 font-bold">🛡️ REGISTRO DE EVENTOS DE SEGURANÇA (AUDIT LOG):</span>
+                    <button type="button" onclick="carregarLogsSegurancaAdmin()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold px-2 py-1 rounded-lg cursor-pointer">
+                        🔄 Atualizar Logs
+                    </button>
+                </div>
+                <div id="admin-logs-container" class="bg-slate-950 border border-slate-800 rounded-xl p-3 max-h-72 overflow-y-auto space-y-2 text-xs">
+                    <p class="text-slate-500 text-center py-4">Carregando logs de auditoria do servidor...</p>
                 </div>
             </div>
         </div>
@@ -1141,22 +1157,44 @@
             }
         }
 
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         function processarMensagemRede(data, conn) {
-            if (!data || !data.tipo) return;
+            if (!data || typeof data !== 'object' || !data.tipo) return;
             const meuNick = localStorage.getItem("mitologico_nickname") || "Guerreiro";
 
             switch (data.tipo) {
                 case 'SOLICITACAO_AMIZADE':
-                    receberSolicitacaoAmizadeRede(data.remetente);
+                    if (data.remetente && typeof data.remetente === 'string') {
+                        receberSolicitacaoAmizadeRede(data.remetente.trim().substring(0, 24));
+                    }
                     break;
                 case 'RESPOSTA_AMIZADE':
-                    receberRespostaAmizadeRede(data.remetente, data.aceito);
+                    if (data.remetente && typeof data.remetente === 'string') {
+                        receberRespostaAmizadeRede(data.remetente.trim().substring(0, 24), Boolean(data.aceito));
+                    }
                     break;
                 case 'CONVITE_SALA':
-                    receberConviteSalaRede(data.remetente, data.codigoSala, data.nomeSala);
+                    if (data.remetente && data.codigoSala) {
+                        receberConviteSalaRede(
+                            String(data.remetente).trim().substring(0, 24),
+                            String(data.codigoSala).trim().substring(0, 20),
+                            String(data.nomeSala || 'Sala').trim().substring(0, 30)
+                        );
+                    }
                     break;
                 case 'ENTRAR_SALA':
-                    processarEntradaNovoJogadorNaSala(data.nickname);
+                    if (data.nickname && typeof data.nickname === 'string') {
+                        processarEntradaNovoJogadorNaSala(data.nickname.trim().substring(0, 24));
+                    }
                     break;
                 case 'SOLICITAR_SALAS_PUBLICAS':
                     if (ehHostSala && salaOnlineCriada) {
@@ -1172,37 +1210,58 @@
                     }
                     break;
                 case 'RESPOSTA_SALAS_PUBLICAS':
-                    adicionarSalaConhecida(data);
+                    if (data.codigo && data.peerId) {
+                        adicionarSalaConhecida({
+                            codigo: String(data.codigo).trim().substring(0, 20),
+                            nome: String(data.nome || 'Sala').trim().substring(0, 30),
+                            dono: String(data.dono || 'Anfitrião').trim().substring(0, 24),
+                            peerId: String(data.peerId).trim().substring(0, 60),
+                            privada: Boolean(data.privada),
+                            vagas: String(data.vagas || '1/2').substring(0, 10)
+                        });
+                    }
                     break;
                 case 'SYNC_JOGO_INICIADO':
-                    jogadores = data.jogadores;
-                    turnoAtual = data.turnoAtual;
-                    document.getElementById("lobby-modal").classList.add("hidden");
-                    renderizarPainelJogadores();
-                    atualizarPosicoesPeoes();
-                    atualizarStatusTurno();
+                    if (Array.isArray(data.jogadores) && data.jogadores.length >= 2) {
+                        jogadores = data.jogadores.map(j => ({
+                            ...j,
+                            nome: escapeHTML(String(j.nome || 'Guerreiro')).substring(0, 20),
+                            saldo: Math.max(0, parseInt(j.saldo, 10) || 1500)
+                        }));
+                        turnoAtual = Math.max(0, Math.min(parseInt(data.turnoAtual, 10) || 0, jogadores.length - 1));
+                        document.getElementById("lobby-modal")?.classList.add("hidden");
+                        renderizarPainelJogadores();
+                        atualizarPosicoesPeoes();
+                        atualizarStatusTurno();
+                    }
                     break;
                 case 'SYNC_ROLAR_DADO':
+                    const dadoVal = Math.min(Math.max(1, parseInt(data.resultado, 10) || 1), 6);
                     if (data.jogadorId !== meujogadorIdAtual()) {
-                        moverJogadorComAnimacao(data.resultado);
+                        moverJogadorComAnimacao(dadoVal);
                     }
                     break;
                 case 'SYNC_FINALIZAR_TURNO':
-                    turnoAtual = data.proximoTurno;
-                    jogando = false;
-                    atualizarStatusTurno();
+                    if (typeof data.proximoTurno === 'number' && data.proximoTurno >= 0 && data.proximoTurno < jogadores.length) {
+                        turnoAtual = data.proximoTurno;
+                        jogando = false;
+                        atualizarStatusTurno();
+                    }
                     break;
                 case 'SYNC_COMPRA':
-                    const casaC = TABULEIRO_CASAS.find(c => c.id === data.casaId);
-                    const comp = jogadores.find(j => j.id === data.compradorId);
-                    if (casaC && comp) {
+                    const casaId = parseInt(data.casaId, 10);
+                    const compId = parseInt(data.compradorId, 10);
+                    const casaC = TABULEIRO_CASAS.find(c => c.id === casaId);
+                    const comp = jogadores.find(j => j.id === compId);
+                    if (casaC && comp && casaC.tipo === 'propriedade' && casaC.dono === null && comp.saldo >= casaC.valor) {
                         comp.saldo -= casaC.valor;
                         casaC.dono = comp.id;
                         renderizarPainelJogadores();
+                        atualizarBadgesProprietarios();
                     }
                     break;
                 case 'SYNC_FIM_PARTIDA':
-                    if (data.vencedor) {
+                    if (data.vencedor && data.vencedor.nome) {
                         processarFimDePartida(data.vencedor, false);
                     }
                     break;
@@ -1223,29 +1282,37 @@
         }
 
         function receberSolicitacaoAmizadeRede(nomeRemetente) {
+            const cleanNome = escapeHTML(nomeRemetente).substring(0, 24);
             solicitacoesPendentes = JSON.parse(localStorage.getItem("mitologico_solicitacoes") || "[]");
-            if (!solicitacoesPendentes.includes(nomeRemetente)) {
-                solicitacoesPendentes.push(nomeRemetente);
+            if (!solicitacoesPendentes.includes(cleanNome)) {
+                solicitacoesPendentes.push(cleanNome);
                 localStorage.setItem("mitologico_solicitacoes", JSON.stringify(solicitacoesPendentes));
             }
             renderizarAmigosFotos();
-            adicionarHistorico(`📩 Solicitação de amizade recebida de <strong>${nomeRemetente}</strong>!`);
+            adicionarHistorico(`📩 Solicitação de amizade recebida de <strong>${cleanNome}</strong>!`);
         }
 
         function receberRespostaAmizadeRede(nomeRemetente, aceito) {
+            const cleanNome = escapeHTML(nomeRemetente).substring(0, 24);
             if (aceito) {
                 listaAmigos = JSON.parse(localStorage.getItem("mitologico_amigos") || "[]");
-                if (!listaAmigos.some(a => a.nome.toLowerCase() === nomeRemetente.toLowerCase())) {
-                    listaAmigos.push({ nome: nomeRemetente, status: "aceito" });
+                if (!listaAmigos.some(a => a.nome.toLowerCase() === cleanNome.toLowerCase())) {
+                    listaAmigos.push({ nome: cleanNome, status: "aceito" });
                     localStorage.setItem("mitologico_amigos", JSON.stringify(listaAmigos));
                 }
                 renderizarAmigosFotos();
-                adicionarHistorico(`✅ <strong>${nomeRemetente}</strong> aceitou sua solicitação de amizade!`);
+                adicionarHistorico(`✅ <strong>${cleanNome}</strong> aceitou sua solicitação de amizade!`);
             }
         }
 
         function receberConviteSalaRede(remetente, codigoSala, nomeSala) {
-            adicionarHistorico(`📩 <strong>${remetente}</strong> convidou você para a sala <strong>${nomeSala}</strong> (${codigoSala}). <button type="button" onclick="conectarPeerESala('${remetente}', '${codigoSala}', '${nomeSala}')" class="bg-blue-600 text-white px-2 py-0.5 rounded text-[10px] font-bold ml-1 cursor-pointer">Entrar</button>`);
+            const safeRem = escapeHTML(remetente);
+            const safeCod = escapeHTML(codigoSala);
+            const safeNom = escapeHTML(nomeSala);
+            const encRem = encodeURIComponent(remetente);
+            const encCod = encodeURIComponent(codigoSala);
+            const encNom = encodeURIComponent(nomeSala);
+            adicionarHistorico(`📩 <strong>${safeRem}</strong> convidou você para a sala <strong>${safeNom}</strong> (${safeCod}). <button type="button" onclick="conectarPeerESala(decodeURIComponent('${encRem}'), decodeURIComponent('${encCod}'), decodeURIComponent('${encNom}'))" class="bg-blue-600 text-white px-2 py-0.5 rounded text-[10px] font-bold ml-1 cursor-pointer">Entrar</button>`);
         }
 
         function copiarCodigoSalaAntigo() {
@@ -1256,7 +1323,7 @@
             tempInput.select();
             document.execCommand("copy");
             document.body.removeChild(tempInput);
-            adicionarHistorico(`📋 Código da sala <strong>${codigoSalaGlobal}</strong> copiado!`);
+            adicionarHistorico(`📋 Código da sala <strong>${escapeHTML(codigoSalaGlobal)}</strong> copiado!`);
         }
 
         function renderizarAmigosFotos() {
@@ -1272,18 +1339,22 @@
 
             let html = "";
             solicitacoesPendentes.forEach(nome => {
+                const safeNome = escapeHTML(nome);
+                const encNome = encodeURIComponent(nome);
                 html += `
                     <div class="flex items-center justify-between bg-slate-900 border border-amber-500/40 p-2 rounded-lg">
-                        <span class="text-amber-300 font-bold">📩 ${nome}</span>
-                        <button type="button" onclick="aceitarSolicitacaoAmizade('${nome}')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold px-2 py-1 rounded cursor-pointer">Aceitar</button>
+                        <span class="text-amber-300 font-bold">📩 ${safeNome}</span>
+                        <button type="button" onclick="aceitarSolicitacaoAmizade(decodeURIComponent('${encNome}'))" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold px-2 py-1 rounded cursor-pointer">Aceitar</button>
                     </div>
                 `;
             });
             listaAmigos.forEach(a => {
+                const safeNome = escapeHTML(a.nome);
+                const encNome = encodeURIComponent(a.nome);
                 html += `
                     <div class="flex items-center justify-between bg-slate-900 border border-slate-800 p-2 rounded-lg">
-                        <span class="text-slate-200 font-bold">👤 ${a.nome}</span>
-                        <button type="button" onclick="convidarAmigoDireto('${a.nome}')" class="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded cursor-pointer">Convidar</button>
+                        <span class="text-slate-200 font-bold">👤 ${safeNome}</span>
+                        <button type="button" onclick="convidarAmigoDireto(decodeURIComponent('${encNome}'))" class="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded cursor-pointer">Convidar</button>
                     </div>
                 `;
             });
@@ -1291,14 +1362,15 @@
         }
 
         function aceitarSolicitacaoAmizade(nome) {
-            solicitacoesPendentes = solicitacoesPendentes.filter(n => n !== nome);
+            const cleanNome = escapeHTML(nome).substring(0, 24);
+            solicitacoesPendentes = solicitacoesPendentes.filter(n => n !== cleanNome);
             localStorage.setItem("mitologico_solicitacoes", JSON.stringify(solicitacoesPendentes));
-            if (!listaAmigos.some(a => a.nome.toLowerCase() === nome.toLowerCase())) {
-                listaAmigos.push({ nome: nome, status: "aceito" });
+            if (!listaAmigos.some(a => a.nome.toLowerCase() === cleanNome.toLowerCase())) {
+                listaAmigos.push({ nome: cleanNome, status: "aceito" });
                 localStorage.setItem("mitologico_amigos", JSON.stringify(listaAmigos));
             }
             const meuNick = localStorage.getItem("mitologico_nickname") || "Guerreiro";
-            const targetPeerId = "LEGADO_PLAYER_" + nome.replace(/\s+/g, '_').toUpperCase();
+            const targetPeerId = "LEGADO_PLAYER_" + cleanNome.replace(/\s+/g, '_').toUpperCase();
             if (peer) {
                 const conn = peer.connect(targetPeerId);
                 configurarEventosConexaoPeer(conn);
@@ -1538,17 +1610,26 @@
                 return;
             }
 
-            container.innerHTML = salasConhecidas.map(s => `
+            container.innerHTML = salasConhecidas.map(s => {
+                const safeNome = escapeHTML(s.nome);
+                const safeCodigo = escapeHTML(s.codigo);
+                const safeDono = escapeHTML(s.dono);
+                const safeVagas = escapeHTML(s.vagas || '1/2');
+                const encCod = encodeURIComponent(s.codigo);
+                const encDono = encodeURIComponent(s.dono);
+                const encPeer = encodeURIComponent(s.peerId);
+                return `
                 <div class="flex items-center justify-between bg-slate-950 border border-slate-800 p-2.5 rounded-xl font-sans">
                     <div>
-                        <strong class="text-amber-300 font-bold text-xs block">${s.nome} (${s.codigo})</strong>
-                        <span class="text-[10px] text-slate-400">Dono: ${s.dono} • Vagas: ${s.vagas || '1/2'}</span>
+                        <strong class="text-amber-300 font-bold text-xs block">${safeNome} (${safeCodigo})</strong>
+                        <span class="text-[10px] text-slate-400">Dono: ${safeDono} • Vagas: ${safeVagas}</span>
                     </div>
-                    <button type="button" onclick="entrarNaSalaFoto('${s.codigo}', '${s.dono}', '${s.peerId}')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg cursor-pointer active:scale-95 flex items-center gap-1 font-cinzel">
+                    <button type="button" onclick="entrarNaSalaFoto(decodeURIComponent('${encCod}'), decodeURIComponent('${encDono}'), decodeURIComponent('${encPeer}'))" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg cursor-pointer active:scale-95 flex items-center gap-1 font-cinzel">
                         🔗 Entrar
                     </button>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         }
 
         function salvarNicknameAutomatico() {
@@ -2870,24 +2951,90 @@
         function trocarAbaAdmin(aba) {
             const tabUploadBtn = document.getElementById('admin-tab-upload-btn');
             const tabHistoryBtn = document.getElementById('admin-tab-history-btn');
+            const tabLogsBtn = document.getElementById('admin-tab-logs-btn');
             const uploadContent = document.getElementById('admin-tab-upload-content');
             const historyContent = document.getElementById('admin-tab-history-content');
+            const logsContent = document.getElementById('admin-tab-logs-content');
+
+            [tabUploadBtn, tabHistoryBtn, tabLogsBtn].forEach(b => {
+                b?.classList.remove('border-amber-400', 'bg-amber-500/20', 'text-amber-300');
+                b?.classList.add('border-slate-800', 'bg-slate-950', 'text-slate-400');
+            });
+            uploadContent?.classList.add('hidden');
+            historyContent?.classList.add('hidden');
+            logsContent?.classList.add('hidden');
 
             if (aba === 'upload') {
                 tabUploadBtn?.classList.add('border-amber-400', 'bg-amber-500/20', 'text-amber-300');
                 tabUploadBtn?.classList.remove('border-slate-800', 'bg-slate-950', 'text-slate-400');
-                tabHistoryBtn?.classList.remove('border-amber-400', 'bg-amber-500/20', 'text-amber-300');
-                tabHistoryBtn?.classList.add('border-slate-800', 'bg-slate-950', 'text-slate-400');
                 uploadContent?.classList.remove('hidden');
-                historyContent?.classList.add('hidden');
-            } else {
+            } else if (aba === 'history') {
                 tabHistoryBtn?.classList.add('border-amber-400', 'bg-amber-500/20', 'text-amber-300');
                 tabHistoryBtn?.classList.remove('border-slate-800', 'bg-slate-950', 'text-slate-400');
-                tabUploadBtn?.classList.remove('border-amber-400', 'bg-amber-500/20', 'text-amber-300');
-                tabUploadBtn?.classList.add('border-slate-800', 'bg-slate-950', 'text-slate-400');
                 historyContent?.classList.remove('hidden');
-                uploadContent?.classList.add('hidden');
                 carregarHistoricoAdmin();
+            } else if (aba === 'logs') {
+                tabLogsBtn?.classList.add('border-amber-400', 'bg-amber-500/20', 'text-amber-300');
+                tabLogsBtn?.classList.remove('border-slate-800', 'bg-slate-950', 'text-slate-400');
+                logsContent?.classList.remove('hidden');
+                carregarLogsSegurancaAdmin();
+            }
+        }
+
+        async function carregarLogsSegurancaAdmin() {
+            const token = sessionStorage.getItem('imortais_admin_token');
+            const container = document.getElementById('admin-logs-container');
+            if (!container) return;
+
+            container.innerHTML = '<p class="text-slate-500 text-center py-4">Carregando logs de auditoria do servidor...</p>';
+
+            try {
+                const res = await fetch('/api/admin/logs', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+
+                if (res.ok && data.logs) {
+                    if (data.logs.length === 0) {
+                        container.innerHTML = '<p class="text-slate-500 text-center py-4">Nenhum evento registrado ainda no sistema de auditoria.</p>';
+                        return;
+                    }
+
+                    container.innerHTML = data.logs.map(log => {
+                        let icon = 'ℹ️';
+                        if (log.type.includes('BLOCKED') || log.type.includes('FAILED') || log.type.includes('LOCKED')) {
+                            icon = '🚫';
+                        } else if (log.type.includes('SUCCESS') || log.type.includes('APPLIED')) {
+                            icon = '✅';
+                        }
+
+                        const detailsStr = JSON.stringify(log.details || {});
+
+                        return `
+                            <div class="bg-slate-900 border border-slate-800 p-2.5 rounded-xl text-xs space-y-1">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-mono text-[10px] text-amber-400 font-bold flex items-center gap-1">
+                                        <span>${icon}</span> ${log.type}
+                                    </span>
+                                    <span class="text-[9px] text-slate-500 font-mono">
+                                        ${new Date(log.timestamp).toLocaleString('pt-BR')}
+                                    </span>
+                                </div>
+                                <div class="text-[10px] text-slate-300 font-mono">
+                                    <span>IP: <strong class="text-slate-200">${escapeHTML(log.ip)}</strong></span>
+                                    <span class="ml-2 text-slate-500">UA: ${escapeHTML(log.userAgent?.substring(0, 40))}...</span>
+                                </div>
+                                <div class="text-[10px] bg-slate-950 p-1.5 rounded border border-slate-800 font-mono text-slate-400 truncate">
+                                    ${escapeHTML(detailsStr)}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    container.innerHTML = '<p class="text-red-400 text-center py-3">Não foi possível carregar os logs de segurança.</p>';
+                }
+            } catch (e) {
+                container.innerHTML = '<p class="text-red-400 text-center py-3">Erro ao buscar logs no servidor.</p>';
             }
         }
 
