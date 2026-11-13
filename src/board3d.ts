@@ -241,11 +241,10 @@ export function mountBoard3DStage(
   scene.add(shadowFloor);
 
   // Tabletop perspective overview camera aligned with CSS .board-3d grid
+  // Câmera fixa: acompanhar o peão com a câmera fazia o tabuleiro parecer
+  // deslizar sob o personagem, enfraquecendo a sensação de caminhar sobre as casas.
   const baseCamPos = new THREE.Vector3(0, 9.4, 4.65);
   const baseLookAt = new THREE.Vector3(0, 0.2, 0.15);
-  const currentCamPos = baseCamPos.clone();
-  const currentLookAt = baseLookAt.clone();
-  const targetLookAt = baseLookAt.clone();
 
   const camera = new THREE.PerspectiveCamera(42, w / h, 0.5, 45);
   camera.position.copy(baseCamPos);
@@ -318,9 +317,7 @@ export function mountBoard3DStage(
       if (now < actor.walkUntil || distRem > 0.06) {
         mode = 'caminhar';
         someoneWalking = true;
-        if (actor.playerId === activeWalkerId) {
-          targetLookAt.set(actor.currentPos.x * 0.24, 0.28, actor.currentPos.z * 0.24 + 0.15);
-        }
+
       } else if (now < actor.celebrateUntil) {
         mode = 'comemorar';
       }
@@ -329,21 +326,11 @@ export function mountBoard3DStage(
       updateCharacterRigAnimation(actor.model, elapsedSec + actor.playerId * 0.4, mode, 1.0);
     }
 
-    if (!someoneWalking) {
-      activeWalkerId = null;
-      targetLookAt.copy(baseLookAt);
-    }
+    if (!someoneWalking) activeWalkerId = null;
 
-    const desiredCamX = targetLookAt.x * 0.65;
-    const desiredCamZ = baseCamPos.z + targetLookAt.z * 0.4;
-    currentCamPos.x = THREE.MathUtils.damp(currentCamPos.x, desiredCamX, 5.5, dt);
-    currentCamPos.z = THREE.MathUtils.damp(currentCamPos.z, desiredCamZ, 5.5, dt);
-    currentLookAt.x = THREE.MathUtils.damp(currentLookAt.x, targetLookAt.x, 5.5, dt);
-    currentLookAt.y = THREE.MathUtils.damp(currentLookAt.y, targetLookAt.y, 5.5, dt);
-    currentLookAt.z = THREE.MathUtils.damp(currentLookAt.z, targetLookAt.z, 5.5, dt);
-
-    camera.position.copy(currentCamPos);
-    camera.lookAt(currentLookAt);
+    // Mantém o enquadramento estável durante o percurso; somente o peão se move.
+    camera.position.copy(baseCamPos);
+    camera.lookAt(baseLookAt);
     renderer.render(scene, camera);
   };
   rafId = requestAnimationFrame(tick);
