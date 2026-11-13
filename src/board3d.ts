@@ -251,7 +251,6 @@ export function mountBoard3DStage(
   camera.lookAt(baseLookAt);
 
   const actors = new Map<number, ActorState>();
-  let activeWalkerId: number | null = null;
   let disposed = false;
   let contextLost = false;
   let rafId = 0;
@@ -293,7 +292,6 @@ export function mountBoard3DStage(
     prevNow = now;
     const elapsedSec = (now - startClock) * 0.001;
 
-    let someoneWalking = false;
 
     for (const actor of actors.values()) {
       actor.pivot.visible = !actor.falido;
@@ -316,7 +314,6 @@ export function mountBoard3DStage(
       let mode: RigAnimationMode = 'idle';
       if (now < actor.walkUntil || distRem > 0.06) {
         mode = 'caminhar';
-        someoneWalking = true;
 
       } else if (now < actor.celebrateUntil) {
         mode = 'comemorar';
@@ -325,8 +322,6 @@ export function mountBoard3DStage(
       actor.animMode = mode;
       updateCharacterRigAnimation(actor.model, elapsedSec + actor.playerId * 0.4, mode, 1.0);
     }
-
-    if (!someoneWalking) activeWalkerId = null;
 
     // Mantém o enquadramento estável durante o percurso; somente o peão se move.
     camera.position.copy(baseCamPos);
@@ -410,7 +405,6 @@ export function mountBoard3DStage(
       actor.targetYaw = computeFacingYaw(startVec, destVec);
       actor.targetPos.copy(destVec);
       actor.walkUntil = performance.now() + 340;
-      activeWalkerId = playerId;
     },
 
     teleportPlayer(playerId: number, tile: number) {
