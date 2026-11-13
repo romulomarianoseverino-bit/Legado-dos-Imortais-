@@ -35,6 +35,9 @@ jobs:
       - name: Instalar dependencias com o lockfile existente
         run: bun install --frozen-lockfile
 
+      - name: Verificar tipos TypeScript
+        run: npm run lint
+
       - name: Compilar aplicacao web (dist/)
         run: npm run build
 
