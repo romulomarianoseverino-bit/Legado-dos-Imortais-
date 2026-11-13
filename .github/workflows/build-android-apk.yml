@@ -2,6 +2,9 @@ name: Build Android APK (Legado dos Imortais)
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 permissions:
   contents: read
