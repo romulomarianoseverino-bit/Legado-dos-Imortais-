@@ -1855,7 +1855,7 @@
                                 <button type="button" id="btn-limpar-foto-char" onclick="limparFotoReferenciaCriador3D()" class="hidden text-[10px] text-red-300 hover:text-red-200 cursor-pointer">🧹 Remover foto</button>
                             </div>
                             <p class="text-[10px] text-slate-400 leading-snug">
-                                Opcional: envie um retrato para sugerir paleta de cores (pele, cabelo e roupa) e brasão no peitoral. <em>Você pode criar seu personagem 100% do zero sem enviar nenhuma foto.</em>
+                                Envie uma foto PNG, JPG ou WebP de até 4 MB. Nesta versão, a foto serve como referência de cores e pode inspirar o brasão; ela <strong>não é convertida automaticamente em um modelo 3D</strong>.
                             </p>
                             <div class="flex flex-wrap items-center gap-2">
                                 <input id="oficina-char-foto-file" type="file" accept="image/png,image/jpeg,image/webp" onchange="processarFotoReferenciaCriador3D(event)" class="flex-1 text-[11px] text-slate-300 file:mr-2 file:py-1.5 file:px-2.5 file:rounded-lg file:border-0 file:bg-amber-500/20 file:text-amber-300 file:font-bold cursor-pointer" />
@@ -1864,7 +1864,8 @@
                                     <span>Brasão no peito</span>
                                 </label>
                             </div>
-                            <p id="oficina-char-foto-status" class="text-[10px] text-slate-400"></p>
+                            <img id="oficina-char-foto-preview" alt="Prévia da foto de referência" class="hidden w-24 h-24 object-cover rounded-lg border border-amber-500/40" />
+                            <p id="oficina-char-foto-status" role="status" aria-live="polite" class="text-[10px] text-slate-400"></p>
                         </div>
 
                         <div class="flex flex-wrap gap-2">
@@ -6223,6 +6224,11 @@
                 const paleta = await mod.analyzePhotoReferencePalette(photoDataUrl);
                 oficinaCharConfig.photoRefDataUrl = photoDataUrl;
                 oficinaCharConfig.aplicarEmblemaFoto = !!document.getElementById('chk-char-emblema-foto')?.checked;
+                const photoPreview = document.getElementById('oficina-char-foto-preview');
+                if (photoPreview) {
+                    photoPreview.src = photoDataUrl;
+                    photoPreview.classList.remove('hidden');
+                }
 
                 oficinaCoresPorRegiao.pele = paleta.pele;
                 oficinaCoresPorRegiao.cabelo = paleta.cabelo;
@@ -6231,7 +6237,7 @@
                 if (clearBtn) clearBtn.classList.remove('hidden');
                 if (statusEl) {
                     statusEl.className = 'text-[10px] text-emerald-400';
-                    statusEl.textContent = '✅ Referência aplicada (tons sugeridos de pele, cabelo, roupa e brasão opcional).';
+                    statusEl.textContent = '✅ Foto carregada. Cores sugeridas aplicadas ao personagem; a foto não gera a geometria 3D.';
                 }
                 await atualizarPreviewAtivoOficina();
             } catch (err) {
@@ -6246,6 +6252,8 @@
         async function limparFotoReferenciaCriador3D() {
             oficinaCharConfig.photoRefDataUrl = null;
             oficinaCharConfig.aplicarEmblemaFoto = false;
+            const photoPreview = document.getElementById('oficina-char-foto-preview');
+            if (photoPreview) { photoPreview.removeAttribute('src'); photoPreview.classList.add('hidden'); }
             const fileEl = document.getElementById('oficina-char-foto-file');
             if (fileEl) fileEl.value = '';
             document.getElementById('btn-limpar-foto-char')?.classList.add('hidden');
