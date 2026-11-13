@@ -1,11 +1,23 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig} from 'vite';
+import { fileURLToPath } from 'url';
+import { defineConfig } from 'vite';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
+    optimizeDeps: {
+      include: [
+        'three',
+        'three/examples/jsm/controls/OrbitControls.js',
+        'three/examples/jsm/loaders/GLTFLoader.js',
+        'three/examples/jsm/environments/RoomEnvironment.js'
+      ]
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
@@ -25,7 +37,12 @@ export default defineConfig(() => {
           'server.ts',
           'tsconfig.json',
           'package.json',
-          'metadata.json'
+          'metadata.json',
+          'bun.lock',
+          '.gitignore',
+          '*.bak',
+          '*.log',
+          '*.tmp'
         ]
       }
     },

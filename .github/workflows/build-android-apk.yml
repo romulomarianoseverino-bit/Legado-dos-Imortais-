@@ -1,0 +1,52 @@
+name: Build Android APK (Legado dos Imortais)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-android-apk:
+    name: Compilar APK Debug Instalavel
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar codigo do repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Configurar Java 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Instalar dependencias do projeto
+        run: npm ci || npm install
+
+      - name: Compilar aplicacao web (dist/)
+        run: npm run build
+
+      - name: Preparar plataforma Android com Capacitor
+        run: |
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
+          npx cap sync android
+
+      - name: Garantir permissao de execucao do Gradle
+        run: chmod +x android/gradlew
+
+      - name: Compilar APK de testes (assembleDebug)
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: Publicar APK como artefato para download
+        uses: actions/upload-artifact@v4
+        with:
+          name: legado-dos-imortais-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30

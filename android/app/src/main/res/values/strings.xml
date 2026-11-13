@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Legado dos Imortais</string>
+    <string name="title_activity_main">Legado dos Imortais</string>
+    <string name="package_name">com.legadodosimortais.app</string>
+    <string name="custom_url_scheme">com.legadodosimortais.app</string>
+</resources>
