@@ -1,0 +1,56 @@
+Todas as 9 fases do planejamento de evolução de Legado dos Imortais — Edição Lendária foram concluídas, preservando todas as regras do tabuleiro, passivas dos deuses, controles independentes de volume (0%–100%), multiplayer P2P e proteções de segurança do servidor.
+O que foi entregue nesta etapa final (Fases 5 a 9)
+Fase 5 — Oficina e Peças 3D (src/pieces3d.ts + #modal-oficina-3d em index.html)
+6 Modelos Mitológicos e Animais Compostos em Three.js (PBR): Guerreiro Espartano, Coruja de Atena, Leão de Nemeia, Lobo do Tártaro, Pégaso Dourado e Dragão de Delfos (12–16 malhas cada, pivô aterrado na base, cor e escala configuráveis + Modo Leve Android).
+Importação Validada .GLB / .GLTF: Valida extensão, limite máximo de 5 MB, assinatura binária glTF 2.0 (0x46546C67), bloqueia URIs inseguras (javascript: ou dependências externas soltas em .gltf) e limita a 120.000 triângulos antes de exibir e salvar.
+Totem Fotográfico 3D (Rotulagem Honesta): Recorta foto enviada (.png, .jpg, .webp) em 512x512 e aplica em um medalhão/escultura 3D mitológica (deixando explícito na interface que não se trata de reconstrução fotogramétrica por IA a partir de foto 2D).
+Biblioteca Pessoal (IndexedDB) e Tabuleiro: Salva criações offline em LegadoImortaisPecas3DDB, equipa por slot (Jogador 1..4) com opção de restaurar o ícone clássico do Deus (⚡, 🦉, 🔱, ⚔️) e adiciona animação de salto/rotação sincronizada (pawn-3d-step) aos passos no tabuleiro.
+Fase 6 — Reformulação da Tela Inicial (#lobby-view-cinematic)
+Backup pré-redesign salvo em .backups/pre-evolucao-2026/index_pre_home_redesign.html.bak.
+Cenário mitológico elevado com prévia estilizada do tabuleiro sagrado integrado ao fundo, título Legado dos Imortais — Edição Lendária em destaque, cena reunida dos 4 Deuses e atalhos para Oficina 3D e Ranking, mantendo intacto o botão Visual Clássico (#lobby-view-classic) e todos os seletores originais.
+Fase 7 — Projeto Android Instalável via GitHub Actions
+Criados capacitor.config.ts (com.legadodosimortais.app, webDir: 'dist', androidScheme: 'https'), projeto nativo android/ (sincronizado via npx cap sync android com permissões INTERNET e ACCESS_NETWORK_STATE) e workflow .github/workflows/build-android-apk.yml (workflow_dispatch, Java 17, Node 20, ./gradlew assembleDebug, publicando o artefato legado-dos-imortais-debug-apk).
+Ajustados server.ts (CSP data: blob: para modelos GLTF locais e Cross-Origin-Resource-Policy: cross-origin apenas para origens Capacitor permitidas em /api/ranking/*) e .gitignore (protegendo .backups/ e android/app/build/).
+Verificações Executadas e Limitações Transparentes
+Compilação e Tipos: vite build (compile_applet) e tsc --noEmit (lint_applet) executados após todas as alterações finais e aprovados sem erros.
+Testes Three.js & Importador (Fase 5): Verificada rejeição de .exe, >5 MB, cabeçalho GLB inválido e javascript: em .gltf, aceitação de .glb/.gltf válidos e construção aterrada dos 6 arquétipos 3D.
+Suíte Integrada e Segurança (Fase 8): Validados todos os <script> inline de index.html, presença de todos os IDs funcionais, proteção HTTP 403 em .backups e .env, CORS/CORP a partir de https://localhost e ciclo completo de sessão/partida/ranking em instância isolada de server.ts servindo dist/.
+Pendências fora do container: Este ambiente não possui .git/credenciais do GitHub, saída física de alto-falantes nem SDK Android para instalar em aparelho real — o envio ao repositório, a execução da Action e o teste em celular ficam com você seguindo o roteiro completo em RELATORIO_DE_IMPLEMENTACAO_LEGADO_DOS_IMORTAIS.md.
+Todas as 9 fases planejadas para Legado dos Imortais — Edição Lendária foram concluídas, preservando todas as regras do tabuleiro, os 4 deuses (Zeus, Poseidon, Hades, Atena), o modo P2P, os controles independentes de volume (0%–100%) e as proteções de segurança do servidor.
+O que foi concluído nas etapas desta continuação
+Fase 5 — Oficina e Peças 3D (src/pieces3d.ts + index.html)
+Criada a Oficina de Peças & Personagens 3D em Three.js com palco interativo (OrbitControls), Modo Leve (Android) e descarte limpo de contexto WebGL ao fechar.
+6 arquétipos compostos PBR: Guerreiro Espartano, Coruja de Atena, Leão de Nemeia, Lobo do Tártaro, Pégaso Dourado e Dragão de Delfos (12–16 malhas cada, cor e escala ajustáveis).
+Importador .glb / .gltf validado: bloqueia arquivos acima de 5 MB, formatos inválidos, assinaturas binárias corrompidas, URIs inseguras (javascript:) ou dependências externas não embutidas, além de limitar a 120.000 triângulos.
+Totem Fotográfico 3D (com rotulagem transparente): aplica a foto recortada do jogador em um medalhão mitológico 3D, deixando explícito na interface que se trata de um totem com retrato aplicado (sem reconstrução 3D por IA offline).
+Biblioteca offline em IndexedDB (LegadoImortaisPecas3DDB): permite salvar, equipar por jogador (1–4), restaurar o ícone clássico do Deus a qualquer momento e animar o peão no tabuleiro durante a caminhada.
+Fase 6 — Tela Inicial Mitológica (index.html)
+Backup pré-redesign criado em .backups/pre-evolucao-2026/index_pre_home_redesign.html.bak.
+Elevada a apresentação cinematográfica com o título em destaque, prévia integrada do tabuleiro sagrado ao fundo, assembleia dos 4 Deuses e atalhos diretos para a Oficina 3D e Ranking, mantendo 100% dos controles e o alternador para o Visual Clássico original.
+Fase 7 — Versão Android via GitHub Actions
+Criados capacitor.config.ts (com.legadodosimortais.app), o projeto nativo android/ (com permissões INTERNET e ACCESS_NETWORK_STATE e assets dist/ sincronizados) e o workflow .github/workflows/build-android-apk.yml (workflow_dispatch).
+Ajustados os cabeçalhos CORS e Cross-Origin-Resource-Policy em server.ts para permitir comunicação segura entre o WebView Android e as rotas /api/ranking/*, e atualizada a CSP com data: / blob: para leitura local de modelos glTF.
+Protegido .gitignore contra o envio de .backups/ (chaves HMAC/dados) e pastas de build.
+Fases 8 e 9 — Verificações e Relatório Final (RELATORIO_DE_IMPLEMENTACAO_LEGADO_DOS_IMORTAIS.md)
+npm run build (vite build) e npm run lint (tsc --noEmit) aprovados sem erros.
+Suíte automatizada de regressão aprovada cobrindo: sintaxe JS e integridade dos IDs em index.html, validação .glb/.gltf e construção das 6 peças 3D, bloqueio HTTP 403 em .backups/ e .env, CSP, fluxo completo de ranking e cabeçalhos Capacitor em servidor de produção isolado.
+Limitações e Próximos Passos no seu Ambiente
+Testes físicos em hardware: Este container não possui alto-falantes, GPU móvel ou SDK Android para rodar o APK localmente; a reprodução sonora física, o desempenho 3D no celular e a instalação do app-debug.apk devem ser validados após gerar o APK.
+Sincronização com o GitHub: Como o ambiente no Google AI Studio não possui .git configurado, siga o passo a passo registrado em RELATORIO_DE_IMPLEMENTACAO_LEGADO_DOS_IMORTAIS.md para enviar os arquivos atualizados ao repositório romulomarianoseverino-bit/Legado-dos-Imortais- (sem sobrescrever o código atual pela versão antiga do GitHub) e executar Actions → Build Android APK (Legado dos Imortais) → Run workflow para baixar o APK instalável.de regressão do jogo (index.html em VM Node + verificação estática):
+Validação sintática via vm.Script dos 2 blocos <script> de index.html: APROVADO.
+Inicialização de TABULEIRO_CASAS (12 casas) e DEUSES (4 deuses), ajuste independente de volumes (ajustarVolumeMusica, ajustarVolumeSfx), movimentação de peça (moverJogadorComAnimacao), compra e saldo (SYNC_COMPRA), troca de turno (SYNC_FINALIZAR_TURNO), inicialização de rede (inicializarRedePeerJSGlobal, processarEntradaNovoJogadorNaSala) e autoridade do host em SYNC_FIM_PARTIDA: APROVADO.
+Observação de ambiente: Na chamada de exibirTelaDerrota na VM sem Web Audio real, tocarSomDerrotaTartaro capturou em try/catch interno um TypeError do mock mínimo de Tone.Synth sem afetar jogoEncerrado = true.
+Build e Verificação de Tipos:
+compile_applet (vite build): APROVADO.
+lint_applet (tsc --noEmit): APROVADO (0 erros).
+5. Arquivos Modificados
+server.ts (journal transacional com estado COMPLETED/RECOVERING/RECOVERY_INCOMPLETE, verificação SHA-256 de backups, bloqueio em recuperação incompleta, fsyncSync, validação de /api/admin/status, endurecimento de CSP e guarda NO_AUTO_START para testes isolados).
+Backup criado antes das alterações: .backups/server.ts.pre-final-hardening.bak.
+Nenhuma modificação foi feita em index.html, regras de jogo, cartas, dados, áudios ou interface visual nesta etapa.
+6. Pendências Externas, Limitações de Teste e Nível de Confiança
+Limitações dos testes neste ambiente: Não há navegador Chromium/Headless disponível no contêiner para testar renderização visual real de Tailwind CDN, reprodução física de Web Audio/Tone.js no dispositivo de áudio nem negociação real de WebRTC/PeerJS entre dois navegadores distintos pela internet. Esses fluxos foram verificados por validação estática de sintaxe, entrega HTTP 200 dos assets, inspeção das diretivas CSP e execução das funções do jogo em VM Node.
+Dependências de hospedagem em produção:
+Configurar ADMIN_SECRET, ADMIN_EMAIL e APP_URL no ambiente de produção/hospedagem (sem elas, o painel administrativo permanece intencionalmente desativado com HTTP 503).
+Garantir volume persistente em disco para .backups/ caso a hospedagem utilize contêineres efêmeros, para que backups, logs de auditoria, bloqueios de força bruta e recuperação pós-queda sobrevivam a reinicializações.
+Terminação TLS/HTTPS e cabeçalhos X-Forwarded-For confiáveis fornecidos pelo proxy reverso da hospedagem (o Express já está configurado com trust proxy: 1).
+Nível de confiança alcançado: Alto para os fluxos de backend, integridade transacional, verificação SHA-256 de backups, recuperação após segunda falha e política CSP inspecionada na porta 3000; moderado-alto para a compatibilidade completa do cliente multiplayer P2P e áudio em produção, pendente apenas de verificação manual em dois navegadores reais com PeerJS e áudio ativos. Não há garantia de segurança absoluta, e 'unsafe-inline' permanece na CSP enquanto scripts e eventos permanecerem inline no index.html.
