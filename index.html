@@ -6241,6 +6241,9 @@
                 }
                 await atualizarPreviewAtivoOficina();
             } catch (err) {
+                // Permite selecionar novamente o mesmo arquivo após uma falha.
+                const fileInput = document.getElementById('oficina-char-foto-file');
+                if (fileInput) fileInput.value = '';
                 if (statusEl) {
                     statusEl.className = 'text-[10px] text-red-400';
                     statusEl.textContent = `❌ ${err?.message || 'Erro ao processar foto.'}`;
