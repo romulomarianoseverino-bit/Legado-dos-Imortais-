@@ -795,17 +795,15 @@ export function updateCharacterRigAnimation(
   if (!root) return;
   const rig = root.userData?.rig as ArticulatedRig | undefined;
 
-  // Fallback gentle motion for non-rigged custom GLB models
+  // Modelos importados sem esqueleto permanecem apoiados no tabuleiro.
+  // Evita saltos e inclinações globais que davam a impressão de sair da superfície.
   if (!rig) {
+    root.position.y = 0;
+    root.rotation.z = 0;
     if (mode === 'caminhar') {
-      root.position.y = Math.abs(Math.sin(elapsedSec * 9.5)) * 0.14;
-      root.rotation.z = Math.sin(elapsedSec * 9.5) * 0.06;
-    } else if (mode === 'comemorar') {
-      root.position.y = Math.abs(Math.sin(elapsedSec * 7.5)) * 0.28;
-      root.rotation.z = 0;
+      root.rotation.x = Math.sin(elapsedSec * 7.2) * 0.012;
     } else {
-      root.position.y = Math.sin(elapsedSec * 2.2) * 0.03;
-      root.rotation.z = 0;
+      root.rotation.x = 0;
     }
     return;
   }
@@ -813,27 +811,27 @@ export function updateCharacterRigAnimation(
   const baseY = rig.baseY || 0.7;
 
   if (mode === 'caminhar') {
-    const freq = 9.2 * strideScale;
+    const freq = 7.2 * strideScale;
     const swing = Math.sin(elapsedSec * freq);
-    const bounce = Math.abs(Math.cos(elapsedSec * freq));
 
     if (rig.pelvis) {
-      rig.pelvis.position.y = baseY + bounce * 0.065;
-      rig.pelvis.rotation.z = swing * 0.04;
+      rig.pelvis.position.y = baseY;
+      rig.pelvis.rotation.z = swing * 0.012;
     }
     if (rig.torso) {
-      rig.torso.rotation.y = -swing * 0.14;
-      rig.torso.rotation.x = 0.08;
+      rig.torso.rotation.y = -swing * 0.045;
+      rig.torso.rotation.x = 0.025;
     }
-    if (rig.leftLeg) rig.leftLeg.rotation.x = swing * 0.62;
-    if (rig.rightLeg) rig.rightLeg.rotation.x = -swing * 0.62;
-    if (rig.leftArm) rig.leftArm.rotation.x = -swing * 0.56;
-    if (rig.rightArm) rig.rightArm.rotation.x = swing * 0.56;
+    // Passos curtos e alternados, com o quadril sempre na altura de repouso.
+    if (rig.leftLeg) rig.leftLeg.rotation.x = swing * 0.34;
+    if (rig.rightLeg) rig.rightLeg.rotation.x = -swing * 0.34;
+    if (rig.leftArm) rig.leftArm.rotation.x = -swing * 0.24;
+    if (rig.rightArm) rig.rightArm.rotation.x = swing * 0.24;
     if (rig.head) {
       rig.head.rotation.y = swing * 0.05;
       rig.head.rotation.x = -0.04;
     }
-    if (rig.cape) rig.cape.rotation.x = 0.25 + bounce * 0.18;
+    if (rig.cape) rig.cape.rotation.x = 0.12 + Math.abs(swing) * 0.035;
     if (rig.leftWing) rig.leftWing.rotation.y = 0.2 + Math.sin(elapsedSec * 10) * 0.18;
     if (rig.rightWing) rig.rightWing.rotation.y = -0.2 - Math.sin(elapsedSec * 10) * 0.18;
     root.position.y = 0;
@@ -841,19 +839,19 @@ export function updateCharacterRigAnimation(
   }
 
   if (mode === 'comemorar') {
-    const hop = Math.abs(Math.sin(elapsedSec * 6.8));
+    const gesture = Math.sin(elapsedSec * 5.2);
     if (rig.pelvis) {
-      rig.pelvis.position.y = baseY + hop * 0.16;
+      rig.pelvis.position.y = baseY;
       rig.pelvis.rotation.z = 0;
     }
     if (rig.torso) {
       rig.torso.rotation.y = Math.sin(elapsedSec * 3.4) * 0.18;
       rig.torso.rotation.x = -0.06;
     }
-    if (rig.leftLeg) rig.leftLeg.rotation.x = -hop * 0.28;
-    if (rig.rightLeg) rig.rightLeg.rotation.x = hop * 0.18;
-    if (rig.leftArm) rig.leftArm.rotation.x = -2.35 + Math.sin(elapsedSec * 8) * 0.22;
-    if (rig.rightArm) rig.rightArm.rotation.x = -2.45 - Math.sin(elapsedSec * 8) * 0.22;
+    if (rig.leftLeg) rig.leftLeg.rotation.x = -0.08;
+    if (rig.rightLeg) rig.rightLeg.rotation.x = 0.08;
+    if (rig.leftArm) rig.leftArm.rotation.x = -1.55 + gesture * 0.12;
+    if (rig.rightArm) rig.rightArm.rotation.x = -1.65 - gesture * 0.12;
     if (rig.head) rig.head.rotation.x = -0.1;
     if (rig.leftWing) rig.leftWing.rotation.y = 0.35 + Math.sin(elapsedSec * 8) * 0.28;
     if (rig.rightWing) rig.rightWing.rotation.y = -0.35 - Math.sin(elapsedSec * 8) * 0.28;
