@@ -9362,12 +9362,24 @@
                             <span class="text-[10px] px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-300">${escapeHTML(b.tema)}</span>
                         </div>
                         <div class="flex flex-wrap gap-1.5">
-                            <button type="button" onclick="importarTabuleiroDaGaleria('${jsonB64}')" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-2.5 py-1 rounded-lg text-[10px] cursor-pointer">⬇️ Importar &amp; Equipar</button>
-                            <button type="button" onclick="avaliarTabuleiroGaleria('${escapeHTML(item.id)}', 5)" class="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 px-2 py-1 rounded-lg text-[10px] cursor-pointer">⭐ 5</button>
-                            <button type="button" onclick="denunciarTabuleiroGaleria('${escapeHTML(item.id)}')" class="bg-red-950/60 hover:bg-red-900/70 border border-red-500/40 text-red-300 px-2 py-1 rounded-lg text-[10px] cursor-pointer">🚩 Denunciar</button>
+                            <button type="button" data-gallery-action="import" data-board-b64="${jsonB64}" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-2.5 py-1 rounded-lg text-[10px] cursor-pointer">⬇️ Importar &amp; Equipar</button>
+                            <button type="button" data-gallery-action="rate" data-gallery-id="${escapeHTML(item.id)}" class="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 px-2 py-1 rounded-lg text-[10px] cursor-pointer">⭐ 5</button>
+                            <button type="button" data-gallery-action="report" data-gallery-id="${escapeHTML(item.id)}" class="bg-red-950/60 hover:bg-red-900/70 border border-red-500/40 text-red-300 px-2 py-1 rounded-lg text-[10px] cursor-pointer">🚩 Denunciar</button>
                         </div>
                     </div>`;
                 }).join('');
+                grid.querySelectorAll('[data-gallery-action]').forEach((button) => {
+                    const action = button.getAttribute('data-gallery-action');
+                    if (action === 'import') {
+                        button.addEventListener('click', () => importarTabuleiroDaGaleria(button.getAttribute('data-board-b64') || ''));
+                        return;
+                    }
+                    const id = button.getAttribute('data-gallery-id') || '';
+                    button.addEventListener('click', () => {
+                        if (action === 'rate') avaliarTabuleiroGaleria(id, 5);
+                        else if (action === 'report') denunciarTabuleiroGaleria(id);
+                    });
+                });
             } catch {
                 grid.innerHTML = '<p class="text-red-400 text-xs col-span-full">Falha ao conectar à galeria do servidor.</p>';
             }
