@@ -3158,25 +3158,30 @@
             let html = "";
             solicitacoesPendentes.forEach(nome => {
                 const safeNome = escapeHTML(nome);
-                const encNome = encodeURIComponent(nome);
                 html += `
                     <div class="flex items-center justify-between bg-slate-900 border border-amber-500/40 p-2 rounded-lg">
                         <span class="text-amber-300 font-bold">📩 ${safeNome}</span>
-                        <button type="button" onclick="aceitarSolicitacaoAmizade(decodeURIComponent('${encNome}'))" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold px-2 py-1 rounded cursor-pointer">Aceitar</button>
+                        <button type="button" data-friend-action="accept" data-friend-name="${safeNome}" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold px-2 py-1 rounded cursor-pointer">Aceitar</button>
                     </div>
                 `;
             });
             listaAmigos.forEach(a => {
                 const safeNome = escapeHTML(a.nome);
-                const encNome = encodeURIComponent(a.nome);
                 html += `
                     <div class="flex items-center justify-between bg-slate-900 border border-slate-800 p-2 rounded-lg">
                         <span class="text-slate-200 font-bold">👤 ${safeNome}</span>
-                        <button type="button" onclick="convidarAmigoDireto(decodeURIComponent('${encNome}'))" class="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded cursor-pointer">Convidar</button>
+                        <button type="button" data-friend-action="invite" data-friend-name="${safeNome}" class="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded cursor-pointer">Convidar</button>
                     </div>
                 `;
             });
             container.innerHTML = html;
+            container.querySelectorAll('[data-friend-action]').forEach((button) => {
+                const nome = button.getAttribute('data-friend-name') || '';
+                button.addEventListener('click', () => {
+                    if (button.getAttribute('data-friend-action') === 'accept') aceitarSolicitacaoAmizade(nome);
+                    else convidarAmigoDireto(nome);
+                });
+            });
         }
 
         function aceitarSolicitacaoAmizade(nome) {
@@ -3458,13 +3463,20 @@
                     <div class="flex items-center justify-between bg-slate-950 border border-slate-800 p-2.5 rounded-xl font-sans">
                         <div>
                             <strong class="text-amber-300 font-bold text-xs block">${escapeHTML(s.nome)} (${escapeHTML(s.code)})</strong>
-                            <span class="text-[10px] text-slate-400">Host: ${escapeHTML(s.hostName)} • ${s.playerCount}/${s.maxPlayers} • ${escapeHTML(s.boardName)}</span>
+                            <span class="text-[10px] text-slate-400">Host: ${escapeHTML(s.hostName)} • ${Number(s.playerCount) || 0}/${Number(s.maxPlayers) || 0} • ${escapeHTML(s.boardName)}</span>
                         </div>
-                        <button type="button" onclick="entrarNaSalaFoto('${escapeHTML(s.code)}','${escapeHTML(s.hostName)}','')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg cursor-pointer active:scale-95 flex items-center gap-1 font-cinzel">
+                        <button type="button" data-room-code="${escapeHTML(s.code)}" data-room-host="${escapeHTML(s.hostName)}" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg cursor-pointer active:scale-95 flex items-center gap-1 font-cinzel">
                             🔗 Entrar
                         </button>
                     </div>
                 `).join('');
+                container.querySelectorAll('[data-room-code]').forEach((button) => {
+                    button.addEventListener('click', () => entrarNaSalaFoto(
+                        button.getAttribute('data-room-code') || '',
+                        button.getAttribute('data-room-host') || '',
+                        ''
+                    ));
+                });
             } catch {
                 container.innerHTML = `<p class="text-xs text-slate-500 text-center py-3 font-cinzel">Servidor de salas indisponível.</p>`;
             }
