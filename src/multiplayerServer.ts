@@ -3,6 +3,7 @@ import http from 'http';
 import crypto from 'crypto';
 import { WebSocketServer, WebSocket } from 'ws';
 import {
+  CHARACTER_CLASSES,
   applyClassStartingBalance,
   applyClassPropertyBuyCost,
   applyClassUpgradeCost,
@@ -256,6 +257,12 @@ function pickGodObj(godIdRaw: unknown, indexFallback: number) {
   if (GODS_MAP[key]) return { ...GODS_MAP[key] };
   const keys: GodId[] = ['zeus', 'poseidon', 'hades', 'atena'];
   return { ...GODS_MAP[keys[indexFallback % keys.length]] };
+}
+
+function sanitizeClassId(raw: unknown): string {
+  return typeof raw === 'string' && CHARACTER_CLASSES.some((item) => item.id === raw)
+    ? raw
+    : 'classico_equilibrado';
 }
 
 function computeStartingBalance(godId: GodId, classeId: string, symmetric: boolean): number {
@@ -590,7 +597,7 @@ export function createMultiplayerServer(): MultiplayerContext {
       const limitPlayers = Math.max(2, Math.min(4, Number(maxPlayers) || 2));
       const symmetric = Boolean(competitiveSymmetric);
       const god = pickGodObj(godId, 0);
-      const cls = typeof classeId === 'string' && classeId ? classeId : 'classico_equilibrado';
+      const cls = sanitizeClassId(classeId);
       const nick = sanitizeNick(playerName, 'Anfitrião');
       const roomName = String(nome || `Sala de ${nick}`).replace(/[<>&"']/g, '').trim().substring(0, 32) || `Sala de ${nick}`;
 
@@ -673,7 +680,7 @@ export function createMultiplayerServer(): MultiplayerContext {
     }
 
     const { playerName, godId, classeId, peca3d } = req.body || {};
-    const newId = room.players.length + 1;
+    const newId = room.players.reduce((highest, player) => Math.max(highest, player.id), 0) + 1;
     const god = pickGodObj(godId, newId - 1);
     const cls = typeof classeId === 'string' && classeId ? classeId : 'classico_equilibrado';
     const nick = sanitizeNick(playerName, `Guerreiro ${newId}`);
