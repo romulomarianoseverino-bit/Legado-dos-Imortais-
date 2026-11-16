@@ -6928,11 +6928,14 @@
                                     Arquivos modificados: ${escapeHTML(String(item.filesCount || 0))} (${escapeHTML(item.files?.join(', ') || '')})
                                 </div>
                             </div>
-                            <button type="button" onclick="executarRollbackAdmin('${escapeHTML(item.id)}')" class="bg-amber-600/90 hover:bg-amber-500 text-slate-950 font-cinzel font-black text-xs px-3 py-1.5 rounded-lg cursor-pointer active:scale-95 transition-all self-start sm:self-center shadow">
+                            <button type="button" data-rollback-id="${escapeHTML(item.id)}" class="bg-amber-600/90 hover:bg-amber-500 text-slate-950 font-cinzel font-black text-xs px-3 py-1.5 rounded-lg cursor-pointer active:scale-95 transition-all self-start sm:self-center shadow">
                                 ⏪ Restaurar Versão
                             </button>
                         </div>
                     `).join('');
+                    container.querySelectorAll('[data-rollback-id]').forEach((button) => {
+                        button.addEventListener('click', () => executarRollbackAdmin(button.getAttribute('data-rollback-id') || ''));
+                    });
                 } else {
                     container.innerHTML = '<p class="text-red-400 text-center py-3">Não foi possível carregar o histórico de versões.</p>';
                 }
