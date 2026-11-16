@@ -4014,8 +4014,9 @@
             jogadores.forEach((j, idx) => {
                 const ehVez = idx === turnoAtual && !j.falido;
                 const peca = j.peca3d || (typeof obterPeca3DAtivaDoSlot === 'function' ? obterPeca3DAtivaDoSlot(j.id) : null);
-                const badgeVisual = (peca && peca.thumbDataUrl)
-                    ? `<img src="${peca.thumbDataUrl}" alt="${escapeHTML(peca.nome || 'Peça 3D')}" class="w-6 h-6 rounded-md object-contain bg-slate-950 border border-cyan-500/40 shrink-0" />`
+                const safeThumb = obterImagemRasterDataUrlSegura(peca?.thumbDataUrl);
+                const badgeVisual = safeThumb
+                    ? `<img src="${safeThumb}" alt="${escapeHTML(peca.nome || 'Peça 3D')}" class="w-6 h-6 rounded-md object-contain bg-slate-950 border border-cyan-500/40 shrink-0" />`
                     : `<span class="text-base sm:text-lg">${j.deus.icon}</span>`;
                 const card = document.createElement("div");
                 card.className = `bg-slate-900 border-2 ${ehVez ? 'border-amber-400 shadow-lg shadow-amber-500/20 scale-[1.02]' : 'border-slate-800 opacity-90'} rounded-xl p-2 sm:p-2.5 transition-all relative overflow-hidden`;
