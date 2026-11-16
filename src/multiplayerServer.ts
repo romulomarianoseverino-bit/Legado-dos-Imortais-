@@ -1034,7 +1034,9 @@ export function createMultiplayerServer(): MultiplayerContext {
     const wss = new WebSocketServer({
       server: httpServer,
       path: '/ws',
-      maxPayload: 256 * 1024
+      // Tabuleiros personalizados podem conter várias miniaturas base64 validadas.
+      // Limite explícito de 4 MiB evita o padrão excessivo do ws sem bloquear esses tabuleiros.
+      maxPayload: 4 * 1024 * 1024
     });
 
     wss.on('connection', (ws) => {
