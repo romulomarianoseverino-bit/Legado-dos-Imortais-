@@ -7587,11 +7587,12 @@
                 listEl.innerHTML = items.map((item) => {
                     const equipada = pecas3DAtivasCache[oficinaSlotAtual]?.id === item.id;
                     const stBadge = item.estiloVisual === 'cartoon' ? 'Cartoon' : item.estiloVisual === 'anime' ? 'Anime' : '3D';
+                    const safeThumb = obterImagemRasterDataUrlSegura(item.thumbDataUrl);
                     return `
                         <div class="flex items-center justify-between gap-2 bg-slate-900 border ${equipada ? 'border-cyan-400' : 'border-slate-800'} rounded-xl p-2">
                             <div class="flex items-center gap-2 min-w-0">
                                 <div class="w-9 h-9 rounded-lg bg-slate-950 border border-slate-700 flex items-center justify-center overflow-hidden shrink-0">
-                                    ${item.thumbDataUrl ? `<img src="${item.thumbDataUrl}" alt="${escapeHTML(item.nome)}" class="w-full h-full object-contain" />` : '<span>🎭</span>'}
+                                    ${safeThumb ? `<img src="${safeThumb}" alt="${escapeHTML(item.nome)}" class="w-full h-full object-contain" />` : '<span>🎭</span>'}
                                 </div>
                                 <div class="min-w-0">
                                     <strong class="text-[11px] font-cinzel text-amber-200 block truncate">${escapeHTML(item.nome)}</strong>
@@ -7599,12 +7600,19 @@
                                 </div>
                             </div>
                             <div class="flex items-center gap-1 shrink-0">
-                                <button type="button" onclick="equiparPecaBiblioteca3D('${escapeHTML(item.id)}')" class="${equipada ? 'bg-cyan-500 text-slate-950' : 'bg-amber-500/20 hover:bg-amber-500/35 text-amber-300'} text-[10px] font-bold px-2 py-1 rounded-lg cursor-pointer">${equipada ? 'Ativa' : 'Equipar'}</button>
-                                <button type="button" onclick="excluirPecaBiblioteca3D('${escapeHTML(item.id)}')" title="Excluir da biblioteca" class="bg-red-900/40 hover:bg-red-700/60 text-red-300 text-[10px] px-1.5 py-1 rounded-lg cursor-pointer">🗑️</button>
+                                <button type="button" data-piece-action="equip" data-piece-id="${escapeHTML(item.id)}" class="${equipada ? 'bg-cyan-500 text-slate-950' : 'bg-amber-500/20 hover:bg-amber-500/35 text-amber-300'} text-[10px] font-bold px-2 py-1 rounded-lg cursor-pointer">${equipada ? 'Ativa' : 'Equipar'}</button>
+                                <button type="button" data-piece-action="delete" data-piece-id="${escapeHTML(item.id)}" title="Excluir da biblioteca" class="bg-red-900/40 hover:bg-red-700/60 text-red-300 text-[10px] px-1.5 py-1 rounded-lg cursor-pointer">🗑️</button>
                             </div>
                         </div>
                     `;
                 }).join('');
+                listEl.querySelectorAll('[data-piece-action]').forEach((button) => {
+                    const id = button.getAttribute('data-piece-id') || '';
+                    button.addEventListener('click', () => {
+                        if (button.getAttribute('data-piece-action') === 'equip') equiparPecaBiblioteca3D(id);
+                        else excluirPecaBiblioteca3D(id);
+                    });
+                });
             } catch {
                 listEl.innerHTML = '<p class="text-red-400 col-span-full py-2 text-center">IndexedDB indisponível neste navegador.</p>';
             }
