@@ -604,13 +604,15 @@ export function createMultiplayerServer(): MultiplayerContext {
 
       let code = '';
       for (let i = 0; i < 8; i++) {
-        const candidate = `OLIMPO-${crypto.randomInt(1000, 9999)}`;
+        const candidate = `OLIMPO-${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
         if (!rooms.has(candidate)) {
           code = candidate;
           break;
         }
       }
-      if (!code) code = `OLIMPO-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
+      if (!code) {
+        return res.status(503).json({ error: 'Não foi possível gerar um código exclusivo para a sala. Tente novamente.' });
+      }
 
       const { tiles, meta } = sanitizeCustomTiles(customBoard);
       const token = crypto.randomBytes(24).toString('hex');
@@ -766,6 +768,10 @@ export function createMultiplayerServer(): MultiplayerContext {
       const token = String(msg.sessionToken || '').trim();
       const room = rooms.get(code);
 
+      if (socketMeta.has(ws)) {
+        ws.send(JSON.stringify({ type: 'ACTION_REJECTED', reason: 'Este canal WebSocket já está autenticado em uma sala.' }));
+        return;
+      }
       if (!room || room.playerTokens.get(pid) !== token) {
         ws.send(JSON.stringify({ type: 'ACTION_REJECTED', reason: 'Credenciais de sala WebSocket inválidas ou expiradas.' }));
         return;
