@@ -1,0 +1,1618 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legado dos Imortais: Edição Lendária</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tone.js para Efeitos Sonoros -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- PeerJS para Multiplayer Online P2P -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <!-- Google Fonts: Cinzel e Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        window.selecionarModo = function(modo) {
+            window.modoJogo = modo;
+            const btnAi = document.getElementById("mode-ai");
+            const btnOnline = document.getElementById("mode-online");
+
+            if (btnAi) {
+                btnAi.className = modo === 'ai' ? 
+                    "py-2.5 px-2 rounded-lg text-xs font-bold border-2 border-amber-400 bg-amber-500/20 text-amber-300 cursor-pointer flex items-center justify-center gap-1.5 active:scale-95" :
+                    "py-2.5 px-2 rounded-lg text-xs font-bold border border-slate-700 bg-slate-800 text-slate-300 cursor-pointer flex items-center justify-center gap-1.5 active:scale-95";
+            }
+            if (btnOnline) {
+                btnOnline.className = modo === 'online' ? 
+                    "py-2.5 px-2 rounded-lg text-xs font-bold border-2 border-amber-400 bg-amber-500/20 text-amber-300 cursor-pointer flex items-center justify-center gap-1.5 active:scale-95" :
+                    "py-2.5 px-2 rounded-lg text-xs font-bold border border-slate-700 bg-slate-800 text-slate-300 cursor-pointer flex items-center justify-center gap-1.5 active:scale-95";
+            }
+
+            const onlinePanel = document.getElementById("online-panel");
+            if (modo === 'online') {
+                if (onlinePanel) onlinePanel.classList.remove("hidden");
+                if (typeof window.inicializarRedePeerJSGlobal === "function") window.inicializarRedePeerJSGlobal();
+                if (typeof window.trocarAbaOnline === "function") window.trocarAbaOnline('criar');
+            } else {
+                if (onlinePanel) onlinePanel.classList.add("hidden");
+            }
+        };
+
+        window.selecionarQtd = function(qtd) {
+            window.qtdJogadores = qtd;
+            [2, 3, 4].forEach(num => {
+                const btn = document.getElementById(`cnt-${num}`);
+                if (btn) {
+                    btn.className = num === qtd ? 
+                        "py-2 rounded-lg text-xs font-bold border-2 border-amber-400 bg-amber-500/20 text-amber-300 cursor-pointer active:scale-95" : 
+                        "py-2 rounded-lg text-xs font-bold border border-slate-700 bg-slate-800 text-slate-300 cursor-pointer active:scale-95";
+                }
+            });
+            if (typeof window.renderizarSelecaoDeuses === "function") window.renderizarSelecaoDeuses();
+        };
+
+        window.trocarAbaOnline = function(aba) {
+            const painelCriar = document.getElementById("painel-online-criar");
+            const painelBuscar = document.getElementById("painel-online-buscar");
+            const painelAmigos = document.getElementById("painel-online-amigos");
+
+            if (painelCriar) painelCriar.classList.toggle("hidden", aba !== "criar");
+            if (painelBuscar) painelBuscar.classList.toggle("hidden", aba !== "buscar");
+            if (painelAmigos) painelAmigos.classList.toggle("hidden", aba !== "amigos");
+
+            const bCriar = document.getElementById("btn-aba-criar");
+            const bBuscar = document.getElementById("btn-aba-buscar");
+            const bAmigos = document.getElementById("btn-aba-amigos");
+
+            if (bCriar) {
+                bCriar.className = aba === "criar" ? 
+                    "py-2 text-[11px] font-bold rounded-xl border border-blue-500/60 bg-blue-600/20 text-blue-300 cursor-pointer text-center transition-all flex items-center justify-center gap-1" : 
+                    "py-2 text-[11px] font-bold rounded-xl border border-slate-800 bg-slate-900 text-slate-400 cursor-pointer text-center transition-all flex items-center justify-center gap-1";
+            }
+            if (bBuscar) {
+                bBuscar.className = aba === "buscar" ? 
+                    "py-2 text-[11px] font-bold rounded-xl border border-blue-500/60 bg-blue-600/20 text-blue-300 cursor-pointer text-center transition-all flex items-center justify-center gap-1" : 
+                    "py-2 text-[11px] font-bold rounded-xl border border-slate-800 bg-slate-900 text-slate-400 cursor-pointer text-center transition-all flex items-center justify-center gap-1";
+            }
+            if (bAmigos) {
+                bAmigos.className = aba === "amigos" ? 
+                    "py-2 text-[11px] font-bold rounded-xl border border-blue-500/60 bg-blue-600/20 text-blue-300 cursor-pointer text-center transition-all flex items-center justify-center gap-1" : 
+                    "py-2 text-[11px] font-bold rounded-xl border border-slate-800 bg-slate-900 text-slate-400 cursor-pointer text-center transition-all flex items-center justify-center gap-1";
+            }
+
+            if (aba === "buscar" && typeof window.renderizarSalasPublicasFotos === "function") window.renderizarSalasPublicasFotos();
+            if (aba === "amigos" && typeof window.renderizarAmigosFotos === "function") window.renderizarAmigosFotos();
+        };
+
+        window.iniciarDoLobby = function() {
+            if (typeof window._iniciarDoLobbyImpl === "function") {
+                window._iniciarDoLobbyImpl();
+            }
+        };
+
+        window.executarCriarSalaAgora = function() {
+            if (typeof window._executarCriarSalaAgoraImpl === "function") {
+                window._executarCriarSalaAgoraImpl();
+            }
+        };
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at top, #1e1b4b, #020617);
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+        .font-cinzel { font-family: 'Cinzel', serif; }
+        .sq-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .sq-card:hover { transform: scale(1.04); z-index: 15; }
+        .sq-bg-icon {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            opacity: 0.16;
+            pointer-events: none;
+            filter: saturate(1.2);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        .sq-card:hover .sq-bg-icon { transform: scale(1.18); opacity: 0.28; }
+        .sq-custom-img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.55;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .sq-img-btn {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            z-index: 25;
+            font-size: 10px;
+            line-height: 1;
+            padding: 2px 3px;
+            border-radius: 4px;
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(251, 191, 36, 0.4);
+            color: #fbbf24;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        .sq-img-btn:hover { opacity: 1; transform: scale(1.1); }
+
+        .coin-scene { width: 90px; height: 90px; perspective: 600px; margin: 0 auto; }
+        .coin-3d { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 1.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        .coin-face { position: absolute; width: 100%; height: 100%; border-radius: 50%; backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 4px solid #fef08a; box-shadow: 0 0 20px rgba(251, 191, 36, 0.4); }
+        .coin-front { background: linear-gradient(135deg, #dc2626, #f59e0b); }
+        .coin-back { background: linear-gradient(135deg, #2563eb, #06b6d4); transform: rotateY(180deg); }
+
+        .big-dice-scene { width: 120px; height: 120px; perspective: 1000px; perspective-origin: 50% 50%; margin: 0 auto; }
+        .big-dice-3d { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 1s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        
+        .big-dice-3d.dice-rolling { animation: mobileDiceSpin 0.6s infinite linear !important; will-change: transform; }
+        @keyframes mobileDiceSpin {
+            0% { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+            33% { transform: rotateX(120deg) rotateY(240deg) rotateZ(60deg); }
+            66% { transform: rotateX(240deg) rotateY(480deg) rotateZ(120deg); }
+            100% { transform: rotateX(360deg) rotateY(720deg) rotateZ(360deg); }
+        }
+
+        .big-dice-face { position: absolute; width: 120px; height: 120px; background: radial-gradient(circle at 30% 30%, #fffbeb, #fbbf24 40%, #b45309 90%); border: 4px solid #fef08a; border-radius: 20px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 14px; box-shadow: inset 0 0 15px rgba(0,0,0,0.4), 0 0 25px rgba(251, 191, 36, 0.6); backface-visibility: hidden; }
+        .pip { width: 16px; height: 16px; background: radial-gradient(circle at 30% 30%, #334155, #020617); border-radius: 50%; align-self: center; justify-self: center; box-shadow: inset 0 1px 2px rgba(0,0,0,0.8), 0 1px 1px rgba(255,255,255,0.4); }
+        .b-face-1 { transform: rotateY(0deg) translateZ(60px); }
+        .b-face-2 { transform: rotateY(90deg) translateZ(60px); }
+        .b-face-3 { transform: rotateY(180deg) translateZ(60px); }
+        .b-face-4 { transform: rotateY(-90deg) translateZ(60px); }
+        .b-face-5 { transform: rotateX(90deg) translateZ(60px); }
+        .b-face-6 { transform: rotateX(-90deg) translateZ(60px); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-2 sm:p-4 select-none">
+
+    <!-- CABEÇALHO -->
+    <header class="w-full max-w-4xl flex items-center justify-between px-2 py-1 relative z-10">
+        <div class="flex items-center space-x-2">
+            <span class="text-xl sm:text-2xl animate-bounce">⚡</span>
+            <div>
+                <h1 class="font-cinzel font-black text-sm sm:text-xl text-amber-400 tracking-wider">LEGADO DOS IMORTAIS</h1>
+                <p class="text-[9px] sm:text-[10px] text-amber-200/70 font-cinzel tracking-widest uppercase">Edição Lendária de Deuses & Bênçãos</p>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button type="button" id="btn-save-images" onclick="salvarTodasImagensManualmente()" class="bg-amber-600/90 hover:bg-amber-500 border border-amber-400 text-slate-950 text-[10px] sm:text-xs font-bold px-3 py-1.5 rounded-lg cursor-pointer transition-all">
+                💾 Salvar Imagens
+            </button>
+            <button type="button" onclick="reiniciarPartida()" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 text-[10px] sm:text-xs font-bold px-3 py-1.5 rounded-lg cursor-pointer transition-all hover:border-amber-400">
+                🔄 Reiniciar
+            </button>
+        </div>
+    </header>
+
+    <!-- PAINEL DOS JOGADORES COM DEUSES -->
+    <div id="players-panel" class="w-full max-w-4xl grid grid-cols-2 sm:grid-cols-4 gap-2 my-2 relative z-10">
+        <!-- Preenchido dinamicamente via JS -->
+    </div>
+
+    <!-- TABULEIRO 4x4 (12 CASAS + CENTRO PANTEÃO) -->
+    <input type="file" id="sq-image-picker" accept="image/*" class="hidden" onchange="aplicarImagemCasaSelecionada(event)" />
+    <div class="board-container my-auto py-1 relative z-10">
+        <div class="board-3d relative w-[340px] h-[340px] sm:w-[480px] sm:h-[480px] bg-slate-950 border-4 sm:border-8 border-amber-600/80 rounded-2xl grid grid-cols-4 grid-rows-4 gap-1.5 sm:gap-2 p-1.5 sm:p-2 shadow-2xl">
+            
+            <!-- LINHA 1: 0, 1, 2, 3 -->
+            <div id="sq-0" class="sq-card bg-gradient-to-br from-amber-950/90 via-slate-900 to-amber-900/40 border border-amber-500/60 rounded-lg p-1 flex flex-col justify-between items-center relative overflow-hidden text-center cursor-pointer">
+                <div class="sq-bg-icon">🏛️</div>
+                <span class="text-[7px] font-bold text-amber-400 font-cinzel z-10">INÍCIO</span>
+                <span class="text-[9px] sm:text-xs font-bold font-cinzel text-amber-200 z-10 leading-tight">Portões Olimpo</span>
+                <span class="text-[7px] text-emerald-400 font-semibold z-10">+ $200</span>
+            </div>
+
+            <div id="sq-1" onclick="abrirModalNegociacao(1)" class="sq-card bg-gradient-to-br from-stone-900 via-slate-900 to-amber-950/50 border border-amber-700/60 rounded-lg p-1 flex flex-col justify-between items-center relative overflow-hidden text-center cursor-pointer">
+                <div class="sq-bg-icon">🐂</div>
+                <div id="owner-badge-1" class="absolute top-0.5 right-0.5 text-[8px] font-extrabold px-1 py-0.2 rounded z-20 hidden shadow-md"></div>
+                <div id="level-1" class="absolute top-0.5 left-0.5 text-[8px] z-20"></div>
+                <span class="text-[7px] text-slate-400 font-cinzel z-10">PROP.</span>
+                <span class="text-[9px] sm:text-xs font-bold font-cinzel text-slate-200 z-10 leading-tight">Lab. de Creta</span>
+                <span class="text-[7px] text-amber-400 font-mono z-10">$ 600</span>
+            </div>
+
+            <div id="sq-2" onclick="abrirModalNegociacao(2)" class="sq-card bg-gradient-to-br from-emerald-950/80 via-slate-900 to-green-950/40 border border-emerald-700/60 rounded-lg p-1 flex flex-col justify-between items-center relative overflow-hidden text-center cursor-pointer">
+                <div class="sq-bg-icon">🏹</div>
+                <div id="owner-badge-2" class="absolute top-0.5 right-0.5 text-[8px] font-extrabold px-1 py-0.2 rounded z-20 hidden shadow-md"></div>
+                <div id="level-2" class="absolute top-0.5 left-0.5 text-[8px] z-20"></div>
+                <span class="text-[7px] text-emerald-400 font-cinzel z-10">PROP.</span>
+                <span class="text-[9px] sm:text-xs font-bold font-cinzel text-emerald-200 z-10 leading-tight">Flor. Ártemis</span>
+                <span class="text-[7px] text-amber-400 font-mono z-10">$ 800</span>
+            </div>
+
+            <div id="sq-3" onclick="abrirModalNegociacao(3)" class="sq-card bg-gradient-to-br from-purple-950/80 via-slate-900 to-red-950/50 border border-purple-800/60 rounded-lg p-1 flex flex-col justify-between items-center relative overflow-hidden text-center cursor-pointer">
+                <div class="sq-bg-icon">💀</div>
+                <div id="owner-badge-3" class="absolute top-0.5 right-0.5 text-[8px] font-extrabold px-1 py-0.2 rounded z-20 hidden shadow-md"></div>
+                <div id="level-3" class="absolute top-0.5 left-0.5 text-[8px] z-20"></div>
+                <span class="text-[7px] text-purple-400 font-cinzel z-10">PROP.</span>
+                <span class="text-[9px] sm:text-xs font-bold font-cinzel text-purple-200 z-10 leading-tight">Sub. Hades</span>
+                <span class="text-[7px] text-amber-400 font-mono z-10">$ 1.200</span>
+            </div>
+
+            <!-- LINHA 2: 11, CENTRO (2x2), 4 -->
+            <div id="sq-11" onclick="abrirModalNegociacao(11)" class="sq-card bg-gradient-to-br from-amber-950/90 via-slate-900 to-yellow-900/40 border-2 border-amber-400/80 rounded-lg p-1 flex flex-col justify-between items-center relative overflow-hidden text-center cursor-pointer">
+                <div class="sq-bg-icon">⛰️</div>
+                <div id="owner-badge-11" class="absolute top-0.5 right-0.5 text-[8px] font-extrabold px-1 py-0.2 rounded z-20 hidden shadow-md"></div>
+                <div id="level-11" class="absolute top-0.5 left-0.5 text-[8px] z-20"></div>
+                <span class="text-[7px] font-bold text-amber-400 font-cinzel z-10">SAGRADO</span>
+                <span class="text-[9px] sm:text-xs font-bold font-cinzel text-amber-300 z-10 leading-tight">Monte Olimpo</span>
+                <span class="text-[7px] text-amber-400 font-mono font-bold z-10">$ 3.500</span>
+            </div>
+
+            <!-- CENTRO 2x2: PANTEÃO -->
+            <div class="col-span-2 row-span-2 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 rounded-xl flex flex-col items-center justify-center p-2 text-center border border-amber-500/30 relative shadow-inner overflow-hidden">
+                <span class="text-3xl sm:text-4xl mb-1 animate-pulse">🏛️</span>
+                <span class="text-[9px] sm:text-xs font-cinzel text-amber-400 font-bold tracking-widest uppercase">PANTEÃO DOS DEUSES</span>
+                <span class="text-[7px] sm:text-[8px] text-slate-400 mt-0.5">Clique em uma terra para fazer oferta</span>
+            </div>
+
+            <div id="sq-4" class="sq-card bg-gradient-to-br from-cyan-950/80 via-slate-900 to-indigo-950/50 border border-cyan-800/60 rounded-lg p-1 flex flex-col justify-between items-center relative overflow-hidden text-center cursor-pointer">
+                <div class="sq-bg-icon">🔮</div>
+                <span class="text-[7px] text-cyan-400 font-cinzel z-10">BÊNÇÃO</span>
+                <span class="text-[9px] sm:text-xs font-bold font-cinzel text-cyan-200 z-10 leading-tight">Oráculo Delfos</span>
+                <span class="text-[7px] text-slate-300 z-10">Profecia</span>
+            </div>
+
+            <!-- LINHA 3: 10, (CENTRO), 5 -->
+            <div id="sq-10" onclick="abrirModalNegociacao(10)" class="sq-card bg-gradient-to-br from-amber-950/70 via-slate-900 to-orange-950/40 border border-amber-600/60 rounded-lg p-1 flex flex-col justify-between items-center relative overflow-hidden text-center cursor-pointer">
+                <div class="sq-bg-icon">⛵</div>
+                <div id="owner-badge-10" class="absolute top-0.5 right-0.5 text-[8px] font-extrabold px-1 py-0.2 rounded z-20 hidden shadow-md"></div>
+                <div id="level-10" class="absolute top-0.5 left-0.5 text-[8px] z-20"></div>
+                <span class="text-[7px] text-amber-400 font-cinzel z-10">PROP.</span>
+                <span class="text-[9px] sm:text-xs font-bold font-cinzel text-amber-200 z-10 leading-tight">Ilha Rhodes</span>
+                <span class="text-[7px] text-amber-400 font-mono z-10">$ 2.800</span>
+            </div>
+
+            <div id="sq-5" onclick="abrirModalNegociacao(5)" class="sq-card bg-gradient-to-br from-blue-950/80 via-slate-900 to-cyan-950/50 border border-blue-800/60 rounded-lg p-1 flex flex-col justify-between items-center relative overflow-hidden text-center cursor-pointer">
+                <div class="sq-bg-icon">🔱</div>
+                <div id="owner-badge-5" class="absolute top-0.5 right-0.5 text-[8px] font-extrabold px-1 py-0.2 rounded z-20 hidden shadow-md"></div>
+                <div id="level-5" class="absolute top-0.5 left-0.5 text-[8px] z-20"></div>
+                <span class="text-[7px] text-blue-400 font-cinzel z-10">PROP.</span>
+                <span class="text-[9px] sm:text-xs font-bold font-cinzel text-blue-200 z-10 leading-tight">Atlântida</span>
+                <span class="text-[7px] text-amber-400 font-mono z-10">$ 1.500</span>
+            </div>
+
+            <!-- LINHA 4: 9, 8, 7, 6 -->
+            <div id="sq-9" class="sq-card bg-gradient-to-br from-cyan-950/80 via-slate-900 to-indigo-950/50 border border-cyan-800/60 rounded-lg p-1 flex flex-col justify-between items-center relative overflow-hidden text-center cursor-pointer">
+                <div class="sq-bg-icon">👁️</div>
+                <span class="text-[7px] text-cyan-400 font-cinzel z-10">BÊNÇÃO</span>
+                <span class="text-[9px] sm:text-xs font-bold font-cinzel text-cyan-200 z-10 leading-tight">Oráculo Delfos</span>
+                <span class="text-[7px] text-slate-300 z-10">Profecia</span>
+            </div>
+
+            <div id="sq-8" onclick="abrirModalNegociacao(8)" class="sq-card bg-gradient-to-br from-emerald-950/70 via-slate-900 to-teal-950/40 border border-emerald-800/60 rounded-lg p-1 flex flex-col justify-between items-center relative overflow-hidden text-center cursor-pointer">
+                <div class="sq-bg-icon">🌾</div>
+                <div id="owner-badge-8" class="absolute top-0.5 right-0.5 text-[8px] font-extrabold px-1 py-0.2 rounded z-20 hidden shadow-md"></div>
+                <div id="level-8" class="absolute top-0.5 left-0.5 text-[8px] z-20"></div>
+                <span class="text-[7px] text-emerald-400 font-cinzel z-10">PROP.</span>
+                <span class="text-[9px] sm:text-xs font-bold font-cinzel text-emerald-200 z-10 leading-tight">Campos Elísios</span>
+                <span class="text-[7px] text-amber-400 font-mono z-10">$ 2.200</span>
+            </div>
+
+            <div id="sq-7" onclick="abrirModalNegociacao(7)" class="sq-card bg-gradient-to-br from-yellow-950/80 via-slate-900 to-amber-950/50 border border-yellow-700/60 rounded-lg p-1 flex flex-col justify-between items-center relative overflow-hidden text-center cursor-pointer">
+                <div class="sq-bg-icon">☀️</div>
+                <div id="owner-badge-7" class="absolute top-0.5 right-0.5 text-[8px] font-extrabold px-1 py-0.2 rounded z-20 hidden shadow-md"></div>
+                <div id="level-7" class="absolute top-0.5 left-0.5 text-[8px] z-20"></div>
+                <span class="text-[7px] text-yellow-400 font-cinzel z-10">PROP.</span>
+                <span class="text-[9px] sm:text-xs font-bold font-cinzel text-yellow-200 z-10 leading-tight">Temp. Apolo</span>
+                <span class="text-[7px] text-amber-400 font-mono z-10">$ 1.800</span>
+            </div>
+
+            <div id="sq-6" class="sq-card bg-gradient-to-br from-red-950/90 via-slate-900 to-stone-900 border border-red-800/60 rounded-lg p-1 flex flex-col justify-between items-center relative overflow-hidden text-center cursor-pointer">
+                <div class="sq-bg-icon">🔥</div>
+                <span class="text-[7px] font-bold text-red-400 font-cinzel z-10">PRISÃO</span>
+                <span class="text-[9px] sm:text-xs font-bold font-cinzel text-red-200 z-10 leading-tight">Tártaro</span>
+                <span class="text-[7px] text-slate-400 font-semibold z-10">Visita</span>
+            </div>
+
+            <!-- PEÕES DOS JOGADORES -->
+            <div id="pawn-1" class="absolute w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-red-600 border-2 border-white text-white flex items-center justify-center font-bold text-xs sm:text-sm shadow-2xl z-30 transition-all duration-300 transform -translate-x-1/2 -translate-y-1/2 hidden" style="top: 10%; left: 10%;">⚡</div>
+            <div id="pawn-2" class="absolute w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-600 border-2 border-white text-white flex items-center justify-center font-bold text-xs sm:text-sm shadow-2xl z-30 transition-all duration-300 transform -translate-x-1/2 -translate-y-1/2 hidden" style="top: 10%; left: 10%;">🦉</div>
+            <div id="pawn-3" class="absolute w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-600 border-2 border-white text-white flex items-center justify-center font-bold text-xs sm:text-sm shadow-2xl z-30 transition-all duration-300 transform -translate-x-1/2 -translate-y-1/2 hidden" style="top: 10%; left: 10%;">🔱</div>
+            <div id="pawn-4" class="absolute w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-purple-600 border-2 border-white text-white flex items-center justify-center font-bold text-xs sm:text-sm shadow-2xl z-30 transition-all duration-300 transform -translate-x-1/2 -translate-y-1/2 hidden" style="top: 10%; left: 10%;">⚔️</div>
+
+        </div>
+    </div>
+
+    <!-- MENSAGEM DE STATUS E HISTÓRICO -->
+    <div class="w-full max-w-xl space-y-1.5 my-1 relative z-10">
+        <div class="bg-slate-900/90 border border-amber-500/30 rounded-xl p-2 text-center">
+            <p id="status-text" class="text-slate-300 text-xs sm:text-sm font-medium">
+                Configure a partida no Lobby para começar!
+            </p>
+        </div>
+        <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-2">
+            <p class="text-[9px] font-cinzel text-slate-500 uppercase tracking-wider mb-1">Histórico da Arena Sagrada</p>
+            <ul id="event-history" class="text-[10px] sm:text-xs text-slate-400 space-y-0.5 max-h-16 overflow-y-auto">
+                <li>• Escolha seus Deuses Lendários no Lobby...</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- CONTROLE DO DADO -->
+    <div class="w-full max-w-md flex flex-col items-center space-y-2 pb-2 relative z-20">
+        <span id="turn-indicator" class="text-xs font-cinzel text-amber-400 font-bold tracking-wider uppercase">AGUARDANDO INÍCIO</span>
+        <div class="flex items-center space-x-4">
+            <div class="w-14 h-14 bg-gradient-to-br from-amber-500 to-amber-700 border-2 border-amber-200 rounded-xl flex items-center justify-center font-black text-2xl text-slate-950 shadow-lg" id="dice-box">
+                🎲
+            </div>
+            <button id="btn-roll" type="button" onclick="jogarTurno()" class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-cinzel font-black px-6 py-3 rounded-xl shadow-lg text-sm cursor-pointer hover:scale-105 active:scale-95 transition-all">
+                🎲 ROLAR DADO
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL LOBBY COMPLETO -->
+    <div id="lobby-modal" class="fixed inset-0 bg-slate-950/95 z-[9999] flex items-center justify-center p-3 overflow-y-auto pointer-events-auto" style="touch-action: manipulation !important;">
+        <div class="bg-slate-900 border-2 border-amber-500 rounded-2xl max-w-lg w-full p-4 sm:p-6 text-center shadow-2xl space-y-4 my-auto relative z-[10000] pointer-events-auto">
+            <h2 class="text-xl sm:text-2xl font-cinzel font-black text-amber-400 tracking-wider">LEGADO DOS IMORTAIS</h2>
+            <p class="text-xs text-slate-400">Escolha seu Nickname, modo de jogo e Deuses Lendários:</p>
+
+            <div class="space-y-1 text-left">
+                <label class="text-[11px] font-cinzel text-slate-300 block">Seu Nickname:</label>
+                <div class="flex gap-2">
+                    <input id="nickname-input" type="text" maxlength="14" placeholder="Digite seu nickname (ex: Guerreiro)" oninput="salvarNicknameAutomatico()" class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-amber-300 font-semibold focus:outline-none focus:border-amber-400" />
+                    <button type="button" onclick="salvarNicknameManualmente()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-3 py-2 rounded-lg cursor-pointer flex items-center gap-1 transition-all">
+                        💾 Salvar
+                    </button>
+                </div>
+                <p id="nick-save-feedback" class="text-[10px] text-emerald-400 hidden mt-0.5">✅ Nickname salvo!</p>
+            </div>
+
+            <!-- MODO DE JOGO -->
+            <div class="space-y-1.5 text-left">
+                <label class="text-[11px] font-cinzel text-slate-300 block">Modo de Jogo:</label>
+                <div class="grid grid-cols-2 gap-2 relative z-10">
+                    <button type="button" id="mode-ai" onclick="selecionarModo('ai')" class="py-2.5 px-2 rounded-lg text-xs font-bold border-2 border-amber-400 bg-amber-500/20 text-amber-300 cursor-pointer flex items-center justify-center gap-1.5">🤖 Vs IA</button>
+                    <button type="button" id="mode-online" onclick="selecionarModo('online')" class="py-2.5 px-2 rounded-lg text-xs font-bold border border-slate-700 bg-slate-800 text-slate-300 cursor-pointer flex items-center justify-center gap-1.5">🌐 Online P2P</button>
+                </div>
+            </div>
+
+            <!-- PAINEL MULTIPLAYER ONLINE -->
+            <div id="online-panel" class="hidden space-y-3 text-left bg-slate-950/90 p-3.5 rounded-xl border border-blue-900/60 shadow-2xl font-cinzel relative z-10">
+                
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-blue-400 text-sm">🌐</span>
+                        <h3 class="font-bold text-amber-400 text-xs sm:text-sm tracking-wider">GERENCIADOR DA SALA ONLINE</h3>
+                    </div>
+                    <span id="online-connection-status" class="text-[10px] text-amber-400 font-mono">Desconectado</span>
+                </div>
+
+                <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span id="participantes-cnt-title" class="text-[11px] font-bold text-amber-300">👥 PARTICIPANTES NA SALA (0/2):</span>
+                        <button type="button" id="btn-sair-sala-main" onclick="sairDaSalaAtual()" class="bg-red-800/90 hover:bg-red-700 text-white text-[10px] font-bold px-3 py-1 rounded-lg border border-red-500/50 cursor-pointer active:scale-95 transition-all">
+                            📕 Sair da Sala
+                        </button>
+                    </div>
+
+                    <div id="participantes-slots-container" class="space-y-1.5 font-sans">
+                        <div class="flex items-center justify-between bg-slate-950 border border-slate-800 p-2 rounded-lg">
+                            <span class="text-slate-500 text-xs flex items-center gap-1">• Vaga 1 Aberta</span>
+                            <span class="bg-slate-900 text-slate-500 text-[9px] font-bold px-2 py-0.5 rounded border border-slate-800">VAZIO</span>
+                        </div>
+                        <div class="flex items-center justify-between bg-slate-950 border border-slate-800 p-2 rounded-lg">
+                            <span class="text-slate-500 text-xs flex items-center gap-1">• Vaga 2 Aberta</span>
+                            <span class="bg-slate-900 text-slate-500 text-[9px] font-bold px-2 py-0.5 rounded border border-slate-800">VAZIO</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 py-1">
+                    <button type="button" id="btn-aba-criar" onclick="trocarAbaOnline('criar')" class="py-2 text-[11px] font-bold rounded-xl border border-blue-500/60 bg-blue-600/20 text-blue-300 cursor-pointer text-center flex items-center justify-center gap-1">
+                        🏰 Criar Sala
+                    </button>
+                    <button type="button" id="btn-aba-buscar" onclick="trocarAbaOnline('buscar')" class="py-2 text-[11px] font-bold rounded-xl border border-slate-800 bg-slate-900 text-slate-400 cursor-pointer text-center flex items-center justify-center gap-1">
+                        🔍 Buscar Salas
+                    </button>
+                    <button type="button" id="btn-aba-amigos" onclick="trocarAbaOnline('amigos')" class="py-2 text-[11px] font-bold rounded-xl border border-slate-800 bg-slate-900 text-slate-400 cursor-pointer text-center flex items-center justify-center gap-1">
+                        👥 Amigos
+                    </button>
+                </div>
+
+                <div id="painel-online-criar" class="space-y-3 font-sans">
+                    <input id="input-nome-sala" type="text" placeholder="Nome da Sala (ex: Olimpo de Zeus)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500" />
+                    
+                    <div class="flex items-center justify-between px-1">
+                        <span class="text-xs font-cinzel text-amber-300 font-bold">TIPO DE SALA:</span>
+                        <div class="flex items-center gap-4 text-xs">
+                            <label class="flex items-center gap-1.5 cursor-pointer text-slate-200 font-medium">
+                                <input type="radio" name="radio-tipo-sala" value="publica" checked class="accent-blue-500"> Público 🌐
+                            </label>
+                            <label class="flex items-center gap-1.5 cursor-pointer text-slate-200 font-medium">
+                                <input type="radio" name="radio-tipo-sala" value="privada" class="accent-blue-500"> Privado 🔒
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3 text-center space-y-1 font-cinzel">
+                        <span class="text-[10px] text-slate-400 font-bold block tracking-wider uppercase">CÓDIGO DE ACESSO DA SALA:</span>
+                        <div class="flex items-center justify-center gap-2">
+                            <span id="display-codigo-sala" class="text-sm font-mono font-bold text-amber-400 tracking-widest">---</span>
+                            <button type="button" onclick="copiarCodigoSalaAntigo()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[10px] px-2.5 py-1 rounded-lg cursor-pointer flex items-center gap-1">
+                                📋 Copiar
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="button" id="btn-criar-sala-agora" onclick="executarCriarSalaAgora()" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-cinzel font-black py-3 rounded-xl shadow-lg text-xs cursor-pointer tracking-wider relative z-20">
+                        🏰 Criar Sala Agora
+                    </button>
+                </div>
+
+                <div id="painel-online-buscar" class="hidden space-y-2.5 font-sans">
+                    <div class="flex gap-2">
+                        <input id="input-buscar-sala-codigo" type="text" placeholder="Digite o Nome ou Código da Sala" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500" />
+                        <button type="button" onclick="buscarSalaPorCodigoOuNome()" class="bg-blue-600 hover:bg-blue-500 text-white font-cinzel font-bold text-xs px-3.5 py-2 rounded-xl cursor-pointer flex items-center gap-1">
+                            🔍 Buscar
+                        </button>
+                    </div>
+
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-1.5 pt-1">
+                        <span class="text-xs font-cinzel text-amber-300 font-bold flex items-center gap-1">🌍 SALAS PÚBLICAS ABERTAS:</span>
+                        <button type="button" onclick="renderizarSalasPublicasFotos()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[10px] font-bold px-2 py-1 rounded-lg cursor-pointer flex items-center gap-1">
+                            🔄 Atualizar Lista
+                        </button>
+                    </div>
+                    <div id="container-salas-publicas-fotos" class="space-y-2 max-h-36 overflow-y-auto">
+                    </div>
+                </div>
+
+                <div id="painel-online-amigos" class="hidden space-y-3 font-sans">
+                    <div class="flex gap-2">
+                        <input id="input-nick-amigo" type="text" placeholder="Nickname do Amigo (ex: Nárnia)" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500" />
+                        <button type="button" onclick="enviarSolicitacaoAmizade()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-cinzel font-bold text-xs px-3 py-2 rounded-xl cursor-pointer">
+                            📩 Enviar Solicitação
+                        </button>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <span class="text-[10px] font-cinzel font-bold text-slate-400 block tracking-wider uppercase">SUA LISTA DE AMIGOS E SOLICITAÇÕES:</span>
+                        <div id="container-lista-amigos-fotos" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 max-h-32 overflow-y-auto space-y-1.5 text-xs">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- QTD JOGADORES -->
+            <div id="player-count-box" class="space-y-1.5 text-left">
+                <label class="text-[11px] font-cinzel text-slate-300 block">Quantidade de Jogadores:</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <button type="button" id="cnt-2" onclick="selecionarQtd(2)" class="py-2 rounded-lg text-xs font-bold border-2 border-amber-400 bg-amber-500/20 text-amber-300 cursor-pointer">2 Jogadores</button>
+                    <button type="button" id="cnt-3" onclick="selecionarQtd(3)" class="py-2 rounded-lg text-xs font-bold border border-slate-700 bg-slate-800 text-slate-300 cursor-pointer">3 Jogadores</button>
+                    <button type="button" id="cnt-4" onclick="selecionarQtd(4)" class="py-2 rounded-lg text-xs font-bold border border-slate-700 bg-slate-800 text-slate-300 cursor-pointer">4 Jogadores</button>
+                </div>
+            </div>
+
+            <!-- SELEÇÃO DE DEUSES -->
+            <div class="space-y-2 text-left bg-slate-950/80 p-3 rounded-xl border border-amber-500/30">
+                <label class="text-[11px] font-cinzel text-amber-400 font-bold block">⚡ Selecione os Deuses:</label>
+                <div id="gods-selectors-container" class="space-y-2 max-h-40 overflow-y-auto pr-1">
+                </div>
+            </div>
+
+            <button type="button" id="btn-start-lobby" onclick="iniciarDoLobby()" class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-cinzel font-black py-3.5 rounded-xl shadow-lg text-sm cursor-pointer tracking-wider relative z-20">
+                ⚡ INICIAR PARTIDA MITOLÓGICA
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL DADO 3D -->
+    <div id="dice-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900/90 border-2 border-amber-500 rounded-3xl max-w-xs w-full p-6 text-center shadow-2xl space-y-4">
+            <h3 id="dice-modal-title" class="text-lg font-cinzel font-black text-amber-400 tracking-wider">ROLANDO DADO...</h3>
+            <div class="big-dice-scene my-4">
+                <div id="big-dice-3d" class="big-dice-3d">
+                    <div class="big-dice-face b-face-1"><div></div><div></div><div></div><div></div><div class="pip"></div><div></div><div></div><div></div><div></div></div>
+                    <div class="big-dice-face b-face-2"><div class="pip"></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div class="pip"></div></div>
+                    <div class="big-dice-face b-face-3"><div class="pip"></div><div></div><div></div><div></div><div class="pip"></div><div></div><div></div><div></div><div class="pip"></div></div>
+                    <div class="big-dice-face b-face-4"><div class="pip"></div><div></div><div class="pip"></div><div></div><div></div><div></div><div class="pip"></div><div></div><div class="pip"></div></div>
+                    <div class="big-dice-face b-face-5"><div class="pip"></div><div></div><div class="pip"></div><div></div><div class="pip"></div><div></div><div class="pip"></div><div></div><div class="pip"></div></div>
+                    <div class="big-dice-face b-face-6"><div class="pip"></div><div></div><div class="pip"></div><div class="pip"></div><div></div><div class="pip"></div><div class="pip"></div><div></div><div class="pip"></div></div>
+                </div>
+            </div>
+            <p id="dice-result-text" class="text-sm font-cinzel font-bold text-amber-300 animate-pulse">Sorteando os Deuses...</p>
+        </div>
+    </div>
+
+    <!-- MODAL CARA OU COROA 3D -->
+    <div id="coin-modal" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border-2 border-amber-500 rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl space-y-4">
+            <h3 class="text-lg font-cinzel font-bold text-amber-400">SORTEIO DOS DEUSES</h3>
+            <p id="coin-result-text" class="text-xs text-slate-300">Quem acertar começa o combate!</p>
+            <div class="coin-scene">
+                <div id="coin-3d" class="coin-3d">
+                    <div class="coin-face coin-front">
+                        <span class="text-2xl">🪙</span>
+                        <span class="text-[10px] font-cinzel font-bold text-white">CARA</span>
+                    </div>
+                    <div class="coin-face coin-back">
+                        <span class="text-2xl">👑</span>
+                        <span class="text-[10px] font-cinzel font-bold text-white">COROA</span>
+                    </div>
+                </div>
+            </div>
+            <div id="coin-buttons" class="grid grid-cols-2 gap-3 pt-2">
+                <button type="button" onclick="lancarMoeda('cara')" class="bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl text-xs cursor-pointer active:scale-95">🪙 CARA</button>
+                <button type="button" onclick="lancarMoeda('coroa')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-xs cursor-pointer active:scale-95">👑 COROA</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE COMPRA DE PROPRIEDADE -->
+    <div id="buy-modal" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[10001] flex items-center justify-center p-4">
+        <div class="bg-slate-900 border-2 border-amber-500 rounded-2xl max-w-sm w-full p-5 text-center shadow-2xl space-y-3 relative">
+            <div class="text-4xl" id="buy-prop-icon">🏛️</div>
+            <div>
+                <h3 id="buy-prop-title" class="text-lg font-cinzel font-black text-amber-400">Nome da Propriedade</h3>
+                <p id="buy-prop-desc" class="text-xs text-slate-400 mt-0.5">Deseja adquirir este território sagrado?</p>
+            </div>
+            
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 space-y-1.5 text-left text-[11px]">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-1 font-mono">
+                    <span class="text-slate-400 font-cinzel">Preço de Compra:</span>
+                    <strong id="buy-prop-price" class="text-amber-400 text-xs">$ 0</strong>
+                </div>
+                
+                <div class="pt-1 space-y-1">
+                    <p class="text-[10px] font-cinzel font-bold text-amber-300 uppercase tracking-wider">📜 Tabela de Aluguéis & Evolução:</p>
+                    <div class="flex justify-between text-[10px] text-slate-300 border-b border-slate-800/60 pb-0.5">
+                        <span>🏡 Sem Construção (Base):</span>
+                        <strong id="buy-rent-base" class="text-emerald-400">$ 0</strong>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-slate-300 border-b border-slate-800/60 pb-0.5">
+                        <span>🏛️ 1 Templo (+<span id="buy-cost-t1">$0</span>):</span>
+                        <strong id="buy-rent-t1" class="text-emerald-400">$ 0</strong>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-slate-300 border-b border-slate-800/60 pb-0.5">
+                        <span>🏛️🏛️ 2 Templos (+<span id="buy-cost-t2">$0</span>):</span>
+                        <strong id="buy-rent-t2" class="text-emerald-400">$ 0</strong>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-slate-300 border-b border-slate-800/60 pb-0.5">
+                        <span>🏛️🏛️🏛️ 3 Templos (+<span id="buy-cost-t3">$0</span>):</span>
+                        <strong id="buy-rent-t3" class="text-emerald-400">$ 0</strong>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-amber-300 font-bold pt-0.5">
+                        <span>⚡ Santuário Supremo (+<span id="buy-cost-sup">$0</span>):</span>
+                        <strong id="buy-rent-sup" class="text-amber-400 font-mono">$ 0</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 pt-2">
+                <button type="button" onclick="confirmarCompraPropriedade()" class="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-cinzel font-black py-2.5 rounded-xl text-xs cursor-pointer active:scale-95 shadow-md">
+                    🏛️ Comprar
+                </button>
+                <button type="button" onclick="recusarCompraPropriedade()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-cinzel font-bold py-2.5 rounded-xl text-xs cursor-pointer active:scale-95 border border-slate-700">
+                    ⏩ Passar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE OFERTA E NEGOCIAÇÃO -->
+    <div id="trade-modal" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[10001] flex items-center justify-center p-4">
+        <div class="bg-slate-900 border-2 border-amber-500 rounded-2xl max-w-sm w-full p-5 text-center shadow-2xl space-y-3 relative">
+            <div class="text-4xl" id="trade-prop-icon">🏛️</div>
+            <div>
+                <h3 id="trade-prop-title" class="text-lg font-cinzel font-black text-amber-400">Nome da Propriedade</h3>
+                <p id="trade-prop-owner" class="text-xs text-amber-200 mt-0.5">Proprietário: IA Bot</p>
+            </div>
+            
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2 text-left text-xs">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-1">
+                    <span class="text-slate-400 font-cinzel">Valor Estimado:</span>
+                    <strong id="trade-prop-val" class="text-amber-400 font-mono">$ 0</strong>
+                </div>
+                <div>
+                    <label class="text-[11px] text-slate-300 block mb-1 font-cinzel">Sua Proposta ($ moedas):</label>
+                    <input id="trade-offer-input" type="number" min="100" step="100" placeholder="Ex: 1500" class="w-full bg-slate-900 border border-amber-500/50 rounded-lg px-3 py-2 text-amber-300 font-mono font-bold text-sm focus:outline-none focus:border-amber-400" />
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 pt-2">
+                <button type="button" onclick="enviarOfertaCompra()" class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-cinzel font-black py-2.5 rounded-xl text-xs cursor-pointer active:scale-95 shadow-md">
+                    🤝 Enviar Oferta
+                </button>
+                <button type="button" onclick="fecharModalNegociacao()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-cinzel font-bold py-2.5 rounded-xl text-xs cursor-pointer active:scale-95 border border-slate-700">
+                    ❌ Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE EVOLUÇÃO / CONSTRUÇÃO DE TEMPLOS -->
+    <div id="upgrade-modal" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[10001] flex items-center justify-center p-4">
+        <div class="bg-slate-900 border-2 border-emerald-500 rounded-2xl max-w-sm w-full p-5 text-center shadow-2xl space-y-3 relative">
+            <div class="text-4xl" id="upgrade-prop-icon">🏛️</div>
+            <div>
+                <h3 id="upgrade-prop-title" class="text-lg font-cinzel font-black text-emerald-400">Nome da Propriedade</h3>
+                <p id="upgrade-prop-level" class="text-xs text-amber-300 font-bold mt-0.5">Nível Atual: Terreno Base</p>
+            </div>
+            
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2 text-left text-xs">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-1">
+                    <span class="text-slate-400 font-cinzel">Próxima Construção:</span>
+                    <strong id="upgrade-next-name" class="text-emerald-400">🏛️ 1º Templo</strong>
+                </div>
+                <div class="flex justify-between items-center border-b border-slate-800 pb-1">
+                    <span class="text-slate-400 font-cinzel">Custo da Obra:</span>
+                    <strong id="upgrade-cost" class="text-amber-400 font-mono">$ 0</strong>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400 font-cinzel">Novo Aluguel:</span>
+                    <strong id="upgrade-new-rent" class="text-emerald-300 font-mono">$ 0</strong>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 pt-2">
+                <button type="button" id="btn-confirm-upgrade" onclick="confirmarEvolucaoPropriedade()" class="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-cinzel font-black py-2.5 rounded-xl text-xs cursor-pointer active:scale-95 shadow-md">
+                    🔨 Construir
+                </button>
+                <button type="button" onclick="fecharModalEvolucao()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-cinzel font-bold py-2.5 rounded-xl text-xs cursor-pointer active:scale-95 border border-slate-700">
+                    ❌ Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DO ORÁCULO DE DELFOS -->
+    <div id="oraculo-modal" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[10001] flex items-center justify-center p-4">
+        <div class="bg-slate-900 border-2 border-cyan-500 rounded-2xl max-w-sm w-full p-5 text-center shadow-2xl space-y-3">
+            <div class="text-4xl animate-bounce">🔮</div>
+            <h3 class="text-lg font-cinzel font-black text-cyan-400">PROFECIA DE DELFOS</h3>
+            <p id="oraculo-title" class="text-sm font-bold font-cinzel text-amber-300">Revelando seu destino...</p>
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-300 min-h-[50px] flex items-center justify-center">
+                <p id="oraculo-desc">Os deuses do Olimpo estão decidindo seu destino...</p>
+            </div>
+            <button type="button" onclick="fecharModalOraculo()" class="w-full bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-cinzel font-black py-2.5 rounded-xl text-xs cursor-pointer active:scale-95 shadow-md">
+                ✨ Aceitar Destino
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL DO TÁRTARO (PRISÃO) -->
+    <div id="tartaro-modal" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[10001] flex items-center justify-center p-4">
+        <div class="bg-slate-900 border-2 border-red-500 rounded-2xl max-w-sm w-full p-5 text-center shadow-2xl space-y-3">
+            <div class="text-4xl">🔥</div>
+            <h3 class="text-lg font-cinzel font-black text-red-400">VOCÊ ESTÁ PRESO NO TÁRTARO!</h3>
+            <p id="tartaro-desc" class="text-xs text-slate-300">Escolha como deseja tentar sair do submundo:</p>
+            
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-left space-y-1.5 text-xs">
+                <p class="text-slate-400">• Opção A: Pagar Fiança Sagrada de <strong>$ 150</strong></p>
+                <p class="text-slate-400">• Opção B: Rolar Dado e tirar <strong>6</strong> para sair (permanece até 3 rodadas)</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 pt-2">
+                <button type="button" onclick="tentarSorteTartaro()" class="bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold py-2.5 rounded-xl text-xs cursor-pointer active:scale-95 shadow-md">
+                    🎲 Tentar Tirar 6
+                </button>
+                <button type="button" id="btn-pay-fianca" onclick="pagarFiancaTartaro()" class="bg-red-700 hover:bg-red-600 text-white font-bold py-2.5 rounded-xl text-xs cursor-pointer active:scale-95 shadow-md">
+                    💰 Pagar $ 150
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DEUSES = [
+            { id: "zeus", nome: "Zeus", icon: "⚡", cor: "text-amber-400", passiva: "Raio Olimpiano (+15% saldo inicial)" },
+            { id: "poseidon", nome: "Poseidon", icon: "🔱", cor: "text-cyan-400", passiva: "Tsunami (+10% ao passar na Atlântida)" },
+            { id: "hades", nome: "Hades", icon: "💀", cor: "text-purple-400", passiva: "Reino das Sombras (Desconto Tártaro)" },
+            { id: "atena", nome: "Atena", icon: "🦉", cor: "text-emerald-400", passiva: "Estratégia Sagrada (Imunidade a 1 taxa)" }
+        ];
+
+        const POSICOES_CASAS = [
+            { top: "10%", left: "10%" }, { top: "10%", left: "36%" }, { top: "10%", left: "63%" }, { top: "10%", left: "90%" },
+            { top: "36%", left: "90%" }, { top: "63%", left: "90%" }, { top: "90%", left: "90%" }, { top: "90%", left: "63%" },
+            { top: "90%", left: "36%" }, { top: "90%", left: "10%" }, { top: "63%", left: "10%" }, { top: "36%", left: "10%" }
+        ];
+
+        let TABULEIRO_CASAS = [
+            { id: 0, nome: "Portões do Olimpo", tipo: "inicio", valor: 0 },
+            { id: 1, nome: "Labirinto de Creta", tipo: "propriedade", valor: 600, aluguel: 120, temploCusto: 300, temploAluguel: 250, santuarioCusto: 1000, dono: null, nivel: 0, icon: "🐂" },
+            { id: 2, nome: "Floresta de Ártemis", tipo: "propriedade", valor: 800, aluguel: 160, temploCusto: 400, temploAluguel: 350, santuarioCusto: 1200, dono: null, nivel: 0, icon: "🏹" },
+            { id: 3, nome: "Submundo de Hades", tipo: "propriedade", valor: 1200, aluguel: 240, temploCusto: 600, temploAluguel: 500, santuarioCusto: 1800, dono: null, nivel: 0, icon: "💀" },
+            { id: 4, nome: "Oráculo de Delfos", tipo: "bencao", valor: 0 },
+            { id: 5, nome: "Atlântida", tipo: "propriedade", valor: 1500, aluguel: 300, temploCusto: 750, temploAluguel: 650, santuarioCusto: 2200, dono: null, nivel: 0, icon: "🔱" },
+            { id: 6, nome: "Tártaro", tipo: "prisao", valor: 0 },
+            { id: 7, nome: "Templo de Apolo", tipo: "propriedade", valor: 1800, aluguel: 360, temploCusto: 900, temploAluguel: 800, santuarioCusto: 2500, dono: null, nivel: 0, icon: "☀️" },
+            { id: 8, nome: "Campos Elísios", tipo: "propriedade", valor: 2200, aluguel: 440, temploCusto: 1100, temploAluguel: 1000, santuarioCusto: 3000, dono: null, nivel: 0, icon: "🌾" },
+            { id: 9, nome: "Oráculo de Delfos", tipo: "bencao", valor: 0 },
+            { id: 10, nome: "Ilha de Rhodes", tipo: "propriedade", valor: 2800, aluguel: 560, temploCusto: 1400, temploAluguel: 1300, santuarioCusto: 3800, dono: null, nivel: 0, icon: "⛵" },
+            { id: 11, nome: "Monte Olimpo", tipo: "propriedade", valor: 3500, aluguel: 700, temploCusto: 1750, temploAluguel: 1600, santuarioCusto: 5000, dono: null, nivel: 0, icon: "⛰️" }
+        ];
+
+        let modoJogo = "ai";
+        let qtdJogadores = 2;
+        let jogadores = [];
+        let turnoAtual = 0;
+        let jogando = false;
+        let jogoEncerrado = false;
+        let propriedadePendente = null;
+        let casaNegociacaoPendente = null;
+        let casaEvolucaoPendente = null;
+        let finalizarTurnoAposEvolucao = false;
+
+        let peer = null;
+        let peerConns = {};
+        let meuPeerIdGlobal = "";
+        let salaOnlineCriada = false;
+        let codigoSalaGlobal = "---";
+        let ehHostSala = false;
+        let salasConhecidas = [];
+        let listaAmigos = JSON.parse(localStorage.getItem("mitologico_amigos") || "[]");
+        let solicitacoesPendentes = JSON.parse(localStorage.getItem("mitologico_solicitacoes") || "[]");
+
+        function inicializarRedePeerJSGlobal() {
+            const nick = localStorage.getItem("mitologico_nickname") || "Guerreiro" + Math.floor(Math.random() * 900);
+            meuPeerIdGlobal = "LEGADO_PLAYER_" + nick.trim().replace(/\s+/g, '_').toUpperCase();
+
+            try {
+                if (peer && !peer.destroyed) {
+                    peer.destroy();
+                }
+                peer = new Peer(meuPeerIdGlobal, {
+                    debug: 1,
+                    config: {
+                        iceServers: [
+                            { urls: 'stun:stun.l.google.com:19302' },
+                            { urls: 'stun:stun1.l.google.com:19302' }
+                        ]
+                    }
+                });
+
+                peer.on('open', (id) => {
+                    const statusEl = document.getElementById("online-connection-status");
+                    if (statusEl) statusEl.innerHTML = `<span class="text-emerald-400 font-bold">🟢 Conectado</span> <span class="text-xs text-slate-400">(${nick})</span>`;
+                    renderizarSalasPublicasFotos();
+                });
+
+                peer.on('connection', (conn) => configurarEventosConexaoPeer(conn));
+                
+                peer.on('error', (err) => {
+                    console.log("PeerJS Status/Erro:", err.type);
+                    if (err.type === 'unavailable-id') {
+                        meuPeerIdGlobal = meuPeerIdGlobal + "_" + Math.floor(Math.random() * 99);
+                        peer = new Peer(meuPeerIdGlobal);
+                    }
+                });
+            } catch (e) {
+                console.log("Erro ao iniciar PeerJS", e);
+            }
+        }
+
+        function configurarEventosConexaoPeer(conn) {
+            peerConns[conn.peer] = conn;
+            conn.on('data', (data) => processarMensagemRede(data, conn));
+            conn.on('close', () => { delete peerConns[conn.peer]; });
+            conn.on('error', () => { delete peerConns[conn.peer]; });
+        }
+
+        function transmitirParaConectados(data) {
+            Object.values(peerConns).forEach(conn => {
+                if (conn && conn.open) conn.send(data);
+            });
+        }
+
+        function enviarMensagemPeer(conn, data) {
+            if (conn && conn.open) {
+                conn.send(data);
+            } else if (conn) {
+                conn.on('open', () => conn.send(data));
+            }
+        }
+
+        function processarMensagemRede(data, conn) {
+            if (!data || !data.tipo) return;
+            const meuNick = localStorage.getItem("mitologico_nickname") || "Guerreiro";
+
+            switch (data.tipo) {
+                case 'SOLICITACAO_AMIZADE':
+                    receberSolicitacaoAmizadeRede(data.remetente);
+                    break;
+                case 'RESPOSTA_AMIZADE':
+                    receberRespostaAmizadeRede(data.remetente, data.aceito);
+                    break;
+                case 'CONVITE_SALA':
+                    receberConviteSalaRede(data.remetente, data.codigoSala, data.nomeSala);
+                    break;
+                case 'ENTRAR_SALA':
+                    processarEntradaNovoJogadorNaSala(data.nickname);
+                    break;
+                case 'SOLICITAR_SALAS_PUBLICAS':
+                    if (ehHostSala && salaOnlineCriada) {
+                        enviarMensagemPeer(conn, {
+                            tipo: 'RESPOSTA_SALAS_PUBLICAS',
+                            codigo: codigoSalaGlobal,
+                            nome: document.getElementById("input-nome-sala")?.value || ("Sala de " + meuNick),
+                            dono: meuNick,
+                            peerId: meuPeerIdGlobal,
+                            privada: false,
+                            vagas: (Object.keys(peerConns).length + 1) + "/2"
+                        });
+                    }
+                    break;
+                case 'RESPOSTA_SALAS_PUBLICAS':
+                    adicionarSalaConhecida(data);
+                    break;
+                case 'SYNC_JOGO_INICIADO':
+                    jogadores = data.jogadores;
+                    turnoAtual = data.turnoAtual;
+                    document.getElementById("lobby-modal").classList.add("hidden");
+                    renderizarPainelJogadores();
+                    atualizarPosicoesPeoes();
+                    atualizarStatusTurno();
+                    break;
+                case 'SYNC_ROLAR_DADO':
+                    if (data.jogadorId !== meujogadorIdAtual()) {
+                        moverJogadorComAnimacao(data.resultado);
+                    }
+                    break;
+                case 'SYNC_FINALIZAR_TURNO':
+                    turnoAtual = data.proximoTurno;
+                    jogando = false;
+                    atualizarStatusTurno();
+                    break;
+                case 'SYNC_COMPRA':
+                    const casaC = TABULEIRO_CASAS.find(c => c.id === data.casaId);
+                    const comp = jogadores.find(j => j.id === data.compradorId);
+                    if (casaC && comp) {
+                        comp.saldo -= casaC.valor;
+                        casaC.dono = comp.id;
+                        renderizarPainelJogadores();
+                    }
+                    break;
+            }
+        }
+
+        function meujogadorIdAtual() {
+            const nick = localStorage.getItem("mitologico_nickname") || "";
+            const j = jogadores.find(p => p.nome.toLowerCase() === nick.toLowerCase());
+            return j ? j.id : 1;
+        }
+
+        function adicionarSalaConhecida(sala) {
+            if (!salasConhecidas.some(s => s.codigo === sala.codigo)) {
+                salasConhecidas.push(sala);
+                renderizarSalasPublicasFotos();
+            }
+        }
+
+        function receberSolicitacaoAmizadeRede(nomeRemetente) {
+            solicitacoesPendentes = JSON.parse(localStorage.getItem("mitologico_solicitacoes") || "[]");
+            if (!solicitacoesPendentes.includes(nomeRemetente)) {
+                solicitacoesPendentes.push(nomeRemetente);
+                localStorage.setItem("mitologico_solicitacoes", JSON.stringify(solicitacoesPendentes));
+            }
+            renderizarAmigosFotos();
+            adicionarHistorico(`📩 Solicitação de amizade recebida de <strong>${nomeRemetente}</strong>!`);
+        }
+
+        function receberRespostaAmizadeRede(nomeRemetente, aceito) {
+            if (aceito) {
+                listaAmigos = JSON.parse(localStorage.getItem("mitologico_amigos") || "[]");
+                if (!listaAmigos.some(a => a.nome.toLowerCase() === nomeRemetente.toLowerCase())) {
+                    listaAmigos.push({ nome: nomeRemetente, status: "aceito" });
+                    localStorage.setItem("mitologico_amigos", JSON.stringify(listaAmigos));
+                }
+                renderizarAmigosFotos();
+                adicionarHistorico(`✅ <strong>${nomeRemetente}</strong> aceitou sua solicitação de amizade!`);
+            }
+        }
+
+        function receberConviteSalaRede(remetente, codigoSala, nomeSala) {
+            adicionarHistorico(`📩 <strong>${remetente}</strong> convidou você para a sala <strong>${nomeSala}</strong> (${codigoSala}). <button type="button" onclick="conectarPeerESala('${remetente}', '${codigoSala}', '${nomeSala}')" class="bg-blue-600 text-white px-2 py-0.5 rounded text-[10px] font-bold ml-1 cursor-pointer">Entrar</button>`);
+        }
+
+        function copiarCodigoSalaAntigo() {
+            if (!codigoSalaGlobal || codigoSalaGlobal === "---") return;
+            const tempInput = document.createElement("input");
+            tempInput.value = codigoSalaGlobal;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempInput);
+            adicionarHistorico(`📋 Código da sala <strong>${codigoSalaGlobal}</strong> copiado!`);
+        }
+
+        function renderizarAmigosFotos() {
+            const container = document.getElementById("container-lista-amigos-fotos");
+            if (!container) return;
+            listaAmigos = JSON.parse(localStorage.getItem("mitologico_amigos") || "[]");
+            solicitacoesPendentes = JSON.parse(localStorage.getItem("mitologico_solicitacoes") || "[]");
+
+            if (listaAmigos.length === 0 && solicitacoesPendentes.length === 0) {
+                container.innerHTML = `<p class="text-slate-500 text-center py-2">Nenhum amigo ou solicitação no momento.</p>`;
+                return;
+            }
+
+            let html = "";
+            solicitacoesPendentes.forEach(nome => {
+                html += `
+                    <div class="flex items-center justify-between bg-slate-900 border border-amber-500/40 p-2 rounded-lg">
+                        <span class="text-amber-300 font-bold">📩 ${nome}</span>
+                        <button type="button" onclick="aceitarSolicitacaoAmizade('${nome}')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold px-2 py-1 rounded cursor-pointer">Aceitar</button>
+                    </div>
+                `;
+            });
+            listaAmigos.forEach(a => {
+                html += `
+                    <div class="flex items-center justify-between bg-slate-900 border border-slate-800 p-2 rounded-lg">
+                        <span class="text-slate-200 font-bold">👤 ${a.nome}</span>
+                        <button type="button" onclick="convidarAmigoDireto('${a.nome}')" class="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded cursor-pointer">Convidar</button>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function aceitarSolicitacaoAmizade(nome) {
+            solicitacoesPendentes = solicitacoesPendentes.filter(n => n !== nome);
+            localStorage.setItem("mitologico_solicitacoes", JSON.stringify(solicitacoesPendentes));
+            if (!listaAmigos.some(a => a.nome.toLowerCase() === nome.toLowerCase())) {
+                listaAmigos.push({ nome: nome, status: "aceito" });
+                localStorage.setItem("mitologico_amigos", JSON.stringify(listaAmigos));
+            }
+            const meuNick = localStorage.getItem("mitologico_nickname") || "Guerreiro";
+            const targetPeerId = "LEGADO_PLAYER_" + nome.replace(/\s+/g, '_').toUpperCase();
+            if (peer) {
+                const conn = peer.connect(targetPeerId);
+                configurarEventosConexaoPeer(conn);
+                conn.on('open', () => enviarMensagemPeer(conn, { tipo: 'RESPOSTA_AMIZADE', remetente: meuNick, aceito: true }));
+            }
+            renderizarAmigosFotos();
+        }
+
+        function executarCriarSalaAgora() {
+            ehHostSala = true;
+            codigoSalaGlobal = "OLIMPO-" + Math.floor(1000 + Math.random() * 9000);
+            const meuNick = localStorage.getItem("mitologico_nickname") || "Anfitrião";
+            const nomeSalaInp = document.getElementById("input-nome-sala")?.value.trim() || ("Sala de " + meuNick);
+
+            const statusEl = document.getElementById("online-connection-status");
+            if (statusEl) statusEl.innerHTML = `<span class="text-emerald-400 font-bold">🟢 Conectado</span> <span class="text-emerald-400/80">(${codigoSalaGlobal})</span>`;
+            const codeDisp = document.getElementById("display-codigo-sala");
+            if (codeDisp) codeDisp.textContent = codigoSalaGlobal;
+            const partCnt = document.getElementById("participantes-cnt-title");
+            if (partCnt) partCnt.textContent = "👥 PARTICIPANTES NA SALA (1/2):";
+
+            const slotsContainer = document.getElementById("participantes-slots-container");
+            if (slotsContainer) {
+                slotsContainer.innerHTML = `
+                    <div class="flex items-center justify-between bg-slate-950 border border-emerald-500/40 p-2 rounded-lg">
+                        <span class="text-emerald-400 font-bold text-xs font-cinzel flex items-center gap-1">👑 ${meuNick}</span>
+                        <span class="bg-emerald-950 text-emerald-400 text-[9px] font-bold px-2.5 py-0.5 rounded border border-emerald-500/50">PRONTO</span>
+                    </div>
+                    <div id="slot-vaga-2" class="flex items-center justify-between bg-slate-950 border border-slate-800 p-2 rounded-lg">
+                        <span class="text-slate-400 text-xs flex items-center gap-1">• Vaga 2 Aberta</span>
+                        <span class="bg-slate-900 text-slate-500 text-[9px] font-bold px-2 py-0.5 rounded border border-slate-800">AGUARDANDO</span>
+                    </div>
+                `;
+            }
+
+            salaOnlineCriada = true;
+
+            // Registra local e publicamente a sala criada
+            adicionarSalaConhecida({
+                codigo: codigoSalaGlobal,
+                nome: nomeSalaInp,
+                dono: meuNick,
+                peerId: meuPeerIdGlobal,
+                privada: false,
+                vagas: "1/2"
+            });
+            let salasGlobais = JSON.parse(localStorage.getItem("mitologico_salas_publicas") || "[]");
+            salasGlobais = salasGlobais.filter(s => s.codigo !== codigoSalaGlobal);
+            salasGlobais.push({
+                codigo: codigoSalaGlobal,
+                nome: nomeSalaInp,
+                dono: meuNick,
+                peerId: meuPeerIdGlobal,
+                vagas: "1/2"
+            });
+            localStorage.setItem("mitologico_salas_publicas", JSON.stringify(salasGlobais));
+
+            adicionarHistorico(`🏰 Sala <strong>${codigoSalaGlobal}</strong> criada com sucesso! Aguardando adversários...`);
+        }
+        window._executarCriarSalaAgoraImpl = executarCriarSalaAgora;
+        window.executarCriarSalaAgora = executarCriarSalaAgora;
+
+        function sairDaSalaAtual() {
+            // Fecha conexões ativas do peer se existirem
+            Object.values(peerConns).forEach(conn => {
+                if (conn && conn.open) conn.close();
+            });
+            peerConns = {};
+
+            // Remove a sala do catálogo local e da lista conhecida
+            if (codigoSalaGlobal !== "---") {
+                let salasGlobais = JSON.parse(localStorage.getItem("mitologico_salas_publicas") || "[]");
+                salasGlobais = salasGlobais.filter(s => s.codigo !== codigoSalaGlobal);
+                localStorage.setItem("mitologico_salas_publicas", JSON.stringify(salasGlobais));
+                salasConhecidas = salasConhecidas.filter(s => s.codigo !== codigoSalaGlobal);
+            }
+
+            salaOnlineCriada = false;
+            codigoSalaGlobal = "---";
+            ehHostSala = false;
+
+            // Reseta visual da interface do lobby online
+            const statusEl = document.getElementById("online-connection-status");
+            if (statusEl) statusEl.innerHTML = `<span class="text-amber-400 font-mono">Desconectado</span>`;
+            const codeDisp = document.getElementById("display-codigo-sala");
+            if (codeDisp) codeDisp.textContent = "---";
+            const partCnt = document.getElementById("participantes-cnt-title");
+            if (partCnt) partCnt.textContent = "👥 PARTICIPANTES NA SALA (0/2):";
+
+            const slotsContainer = document.getElementById("participantes-slots-container");
+            if (slotsContainer) {
+                slotsContainer.innerHTML = `
+                    <div class="flex items-center justify-between bg-slate-950 border border-slate-800 p-2 rounded-lg">
+                        <span class="text-slate-500 text-xs flex items-center gap-1">• Vaga 1 Aberta</span>
+                        <span class="bg-slate-900 text-slate-500 text-[9px] font-bold px-2 py-0.5 rounded border border-slate-800">VAZIO</span>
+                    </div>
+                    <div class="flex items-center justify-between bg-slate-950 border border-slate-800 p-2 rounded-lg">
+                        <span class="text-slate-500 text-xs flex items-center gap-1">• Vaga 2 Aberta</span>
+                        <span class="bg-slate-900 text-slate-500 text-[9px] font-bold px-2 py-0.5 rounded border border-slate-800">VAZIO</span>
+                    </div>
+                `;
+            }
+
+            renderizarSalasPublicasFotos();
+            adicionarHistorico(`📕 Você saiu da sala.`);
+        }
+        window.sairDaSalaAtual = sairDaSalaAtual;
+
+        function buscarSalaPorCodigoOuNome() {
+            const inp = document.getElementById("input-buscar-sala-codigo");
+            const termo = inp ? inp.value.trim().toUpperCase() : "";
+            if (!termo) return;
+
+            const targetPeer = "LEGADO_PLAYER_" + termo.replace(/\s+/g, '_');
+            if (peer) {
+                const conn = peer.connect(targetPeer);
+                configurarEventosConexaoPeer(conn);
+                conn.on('open', () => {
+                    enviarMensagemPeer(conn, { tipo: 'SOLICITAR_SALAS_PUBLICAS' });
+                });
+            }
+        }
+
+        function entrarNaSalaFoto(codigoOuNome, dono, peerIdDono) {
+            conectarPeerESala(dono, codigoOuNome, "Sala de " + dono, peerIdDono);
+        }
+
+        function conectarPeerESala(dono, codigoSala, nomeSala, peerIdDono) {
+            const nickConectado = localStorage.getItem("mitologico_nickname") || "Guerreiro";
+            const targetPeerId = peerIdDono || "LEGADO_PLAYER_" + dono.trim().replace(/\s+/g, '_').toUpperCase();
+
+            if (peer) {
+                const conn = peer.connect(targetPeerId);
+                configurarEventosConexaoPeer(conn);
+                conn.on('open', () => {
+                    enviarMensagemPeer(conn, { tipo: 'ENTRAR_SALA', nickname: nickConectado });
+                });
+            }
+
+            codigoSalaGlobal = codigoSala;
+            ehHostSala = false;
+
+            const statusEl = document.getElementById("online-connection-status");
+            if (statusEl) statusEl.innerHTML = `<span class="text-emerald-400 font-bold">🟢 Conectado</span> <span class="text-emerald-400/80">(${codigoSala})</span>`;
+            const partCnt = document.getElementById("participantes-cnt-title");
+            if (partCnt) partCnt.textContent = "👥 PARTICIPANTES NA SALA (2/2):";
+
+            const slotsContainer = document.getElementById("participantes-slots-container");
+            if (slotsContainer) {
+                slotsContainer.innerHTML = `
+                    <div class="flex items-center justify-between bg-slate-950 border border-emerald-500/40 p-2 rounded-lg">
+                        <span class="text-emerald-400 font-bold text-xs font-cinzel flex items-center gap-1">👑 ${dono}</span>
+                        <span class="bg-emerald-950 text-emerald-400 text-[9px] font-bold px-2.5 py-0.5 rounded border border-emerald-500/50">ANFITRIÃO</span>
+                    </div>
+                    <div class="flex items-center justify-between bg-slate-950 border border-blue-500/40 p-2 rounded-lg">
+                        <span class="text-blue-400 font-bold text-xs font-cinzel flex items-center gap-1">⚔️ ${nickConectado} (Você)</span>
+                        <span class="bg-blue-950 text-blue-400 text-[9px] font-bold px-2.5 py-0.5 rounded border border-blue-500/50">CONECTADO</span>
+                    </div>
+                `;
+            }
+            adicionarHistorico(`🔗 <strong>${nickConectado}</strong> conectou-se à sala <strong>${codigoSala}</strong>!`);
+        }
+
+        function processarEntradaNovoJogadorNaSala(nickNovoJogador) {
+            const partCnt = document.getElementById("participantes-cnt-title");
+            if (partCnt) partCnt.textContent = "👥 PARTICIPANTES NA SALA (2/2):";
+            const slot2 = document.getElementById("slot-vaga-2");
+            if (slot2) {
+                slot2.className = "flex items-center justify-between bg-slate-950 border border-blue-500/40 p-2 rounded-lg";
+                slot2.innerHTML = `
+                    <span class="text-blue-400 font-bold text-xs font-cinzel flex items-center gap-1">⚔️ ${nickNovoJogador}</span>
+                    <span class="bg-blue-950 text-blue-400 text-[9px] font-bold px-2.5 py-0.5 rounded border border-blue-500/50">CONECTADO</span>
+                `;
+            }
+            adicionarHistorico(`🎮 <strong>${nickNovoJogador}</strong> entrou na sua sala!`);
+        }
+
+        function enviarSolicitacaoAmizade() {
+            const inp = document.getElementById("input-nick-amigo");
+            const nickTarget = inp ? inp.value.trim() : "";
+            if (!nickTarget) return;
+            const meuNick = localStorage.getItem("mitologico_nickname") || "Guerreiro";
+            if (nickTarget.toLowerCase() === meuNick.toLowerCase()) return;
+
+            const targetPeerId = "LEGADO_PLAYER_" + nickTarget.replace(/\s+/g, '_').toUpperCase();
+            if (peer) {
+                const conn = peer.connect(targetPeerId);
+                configurarEventosConexaoPeer(conn);
+                conn.on('open', () => {
+                    enviarMensagemPeer(conn, { tipo: 'SOLICITACAO_AMIZADE', remetente: meuNick });
+                    adicionarHistorico(`📩 Solicitação enviada diretamente para <strong>${nickTarget}</strong>.`);
+                });
+            }
+            if (inp) inp.value = "";
+        }
+
+        function convidarAmigoDireto(nomeAmigo) {
+            if (codigoSalaGlobal === "---") executarCriarSalaAgora();
+            const meuNick = localStorage.getItem("mitologico_nickname") || "Guerreiro";
+            const targetPeerId = "LEGADO_PLAYER_" + nomeAmigo.replace(/\s+/g, '_').toUpperCase();
+            if (peer) {
+                const conn = peer.connect(targetPeerId);
+                configurarEventosConexaoPeer(conn);
+                conn.on('open', () => {
+                    enviarMensagemPeer(conn, { tipo: 'CONVITE_SALA', remetente: meuNick, codigoSala: codigoSalaGlobal, nomeSala: "Sala de " + meuNick });
+                    adicionarHistorico(`📩 Convite enviado para <strong>${nomeAmigo}</strong>.`);
+                });
+            }
+        }
+
+        function renderizarSalasPublicasFotos() {
+            const container = document.getElementById("container-salas-publicas-fotos");
+            if (!container) return;
+
+            // Carrega salas criadas localmente + salas transmitidas via P2P
+            let salasSalvas = JSON.parse(localStorage.getItem("mitologico_salas_publicas") || "[]");
+            salasSalvas.forEach(s => {
+                if (!salasConhecidas.some(x => x.codigo === s.codigo)) {
+                    salasConhecidas.push(s);
+                }
+            });
+
+            // Envia pings para amigos buscando salas ativas
+            listaAmigos.forEach(amigo => {
+                const targetPeerId = "LEGADO_PLAYER_" + amigo.nome.replace(/\s+/g, '_').toUpperCase();
+                if (peer) {
+                    const conn = peer.connect(targetPeerId);
+                    configurarEventosConexaoPeer(conn);
+                    conn.on('open', () => {
+                        enviarMensagemPeer(conn, { tipo: 'SOLICITAR_SALAS_PUBLICAS' });
+                    });
+                }
+            });
+
+            if (salasConhecidas.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-3 font-cinzel">Nenhuma sala encontrada. Crie uma nova sala para aparecer na lista!</p>`;
+                return;
+            }
+
+            container.innerHTML = salasConhecidas.map(s => `
+                <div class="flex items-center justify-between bg-slate-950 border border-slate-800 p-2.5 rounded-xl font-sans">
+                    <div>
+                        <strong class="text-amber-300 font-bold text-xs block">${s.nome} (${s.codigo})</strong>
+                        <span class="text-[10px] text-slate-400">Dono: ${s.dono} • Vagas: ${s.vagas || '1/2'}</span>
+                    </div>
+                    <button type="button" onclick="entrarNaSalaFoto('${s.codigo}', '${s.dono}', '${s.peerId}')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg cursor-pointer active:scale-95 flex items-center gap-1 font-cinzel">
+                        🔗 Entrar
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function salvarNicknameAutomatico() {
+            const nickInp = document.getElementById("nickname-input");
+            if (nickInp && nickInp.value.trim() !== "") {
+                localStorage.setItem("mitologico_nickname", nickInp.value.trim());
+            }
+        }
+
+        function salvarNicknameManualmente() {
+            salvarNicknameAutomatico();
+            const feed = document.getElementById("nick-save-feedback");
+            if (feed) {
+                feed.classList.remove("hidden");
+                setTimeout(() => feed.classList.add("hidden"), 2000);
+            }
+            if (typeof window.inicializarRedePeerJSGlobal === "function") window.inicializarRedePeerJSGlobal();
+        }
+
+        function abrirSorteioCaraOuCoroa() {
+            const coinModal = document.getElementById("coin-modal");
+            const coinText = document.getElementById("coin-result-text");
+            const coinBtns = document.getElementById("coin-buttons");
+
+            if (coinText) coinText.textContent = `${jogadores[0].nome}, escolha Cara ou Coroa para ver quem começa!`;
+            if (coinBtns) coinBtns.classList.remove("hidden");
+            if (coinModal) coinModal.classList.remove("hidden");
+        }
+
+        function lancarMoeda(escolhaUsuario) {
+            const coin3d = document.getElementById("coin-3d");
+            const coinBtns = document.getElementById("coin-buttons");
+            const coinText = document.getElementById("coin-result-text");
+            
+            if (coinBtns) coinBtns.classList.add("hidden");
+            if (coinText) coinText.textContent = "Girando a Moeda Divina...";
+
+            const resultado = Math.random() < 0.5 ? 'cara' : 'coroa';
+            const voltas = 5;
+            const anguloFinal = resultado === 'cara' ? (voltas * 360) : (voltas * 360 + 180);
+
+            if (coin3d) {
+                coin3d.style.transform = `rotateY(${anguloFinal}deg)`;
+            }
+
+            setTimeout(() => {
+                const acertou = escolhaUsuario === resultado;
+                if (acertou) {
+                    turnoAtual = 0;
+                    if (coinText) coinText.textContent = `Deu ${resultado.toUpperCase()}! Você acertou e começa primeiro!`;
+                } else {
+                    turnoAtual = jogadores.length > 1 ? 1 : 0;
+                    if (coinText) coinText.textContent = `Deu ${resultado.toUpperCase()}! O adversário começa o combate!`;
+                }
+                
+                setTimeout(() => {
+                    const coinModal = document.getElementById("coin-modal");
+                    if (coinModal) coinModal.classList.add("hidden");
+                    atualizarStatusTurno();
+                }, 1500);
+            }, 1400);
+        }
+
+        function iniciarDoLobby() {
+            const qtd = window.qtdJogadores || qtdJogadores || 2;
+            const modo = window.modoJogo || modoJogo || "ai";
+            jogadores = [];
+            const userNickInput = document.getElementById("nickname-input");
+            const nickSalvo = userNickInput && userNickInput.value.trim() !== "" ? userNickInput.value.trim() : null;
+            const titulosIA = { zeus: "Zeus Olímpico", poseidon: "Soberano dos Mares", hades: "Guardião do Submundo", atena: "Ateniense Estrategista" };
+
+            for (let i = 1; i <= qtd; i++) {
+                const selectEl = document.getElementById(`select-god-p${i}`);
+                const godId = selectEl ? selectEl.value : DEUSES[(i-1)%DEUSES.length].id;
+                const godObj = DEUSES.find(g => g.id === godId) || DEUSES[0];
+                let saldoInicial = 5000;
+                if (godObj.id === "zeus") saldoInicial = Math.floor(saldoInicial * 1.15);
+
+                let nomeJogador = godObj.nome;
+                if (i === 1 && nickSalvo) nomeJogador = nickSalvo;
+                else if (modo === 'ai' && i !== 1) nomeJogador = `${titulosIA[godObj.id] || godObj.nome} (${godObj.nome})`;
+
+                jogadores.push({
+                    id: i, nome: nomeJogador, deus: godObj, saldo: saldoInicial,
+                    pos: 0, preso: false, turnosPreso: 0, falido: false,
+                    imunidadeTaxa: godObj.id === "atena",
+                    isAi: modo === 'ai' && i !== 1
+                });
+
+                const pawn = document.getElementById(`pawn-${i}`);
+                if (pawn) {
+                    pawn.classList.remove("hidden");
+                    pawn.textContent = godObj.icon;
+                }
+            }
+
+            const lobbyMod = document.getElementById("lobby-modal");
+            if (lobbyMod) lobbyMod.classList.add("hidden");
+
+            renderizarPainelJogadores();
+            atualizarPosicoesPeoes();
+            adicionarHistorico(`⚡ Partida iniciada com ${qtd} Jogadores no modo <strong>${modo.toUpperCase()}</strong>!`);
+            
+            abrirSorteioCaraOuCoroa();
+
+            if (modo === 'online' && ehHostSala) {
+                transmitirParaConectados({
+                    tipo: 'SYNC_JOGO_INICIADO',
+                    jogadores: jogadores,
+                    turnoAtual: turnoAtual
+                });
+            }
+        }
+        window._iniciarDoLobbyImpl = iniciarDoLobby;
+        window.iniciarDoLobby = iniciarDoLobby;
+
+        function renderizarSelecaoDeuses() {
+            const container = document.getElementById("gods-selectors-container");
+            if (!container) return;
+            const qtd = window.qtdJogadores || 2;
+            container.innerHTML = "";
+
+            for (let i = 1; i <= qtd; i++) {
+                const row = document.createElement("div");
+                row.className = "flex items-center justify-between bg-slate-900 border border-slate-800 p-2 rounded-lg";
+                row.innerHTML = `
+                    <span class="text-xs font-bold text-amber-300">Jogador ${i}:</span>
+                    <select id="select-god-p${i}" class="bg-slate-950 border border-slate-700 text-amber-200 text-xs rounded px-2 py-1 font-semibold focus:outline-none focus:border-amber-400">
+                        ${DEUSES.map((g, idx) => `<option value="${g.id}" ${idx === (i-1)%DEUSES.length ? 'selected' : ''}>${g.icon} ${g.nome}</option>`).join('')}
+                    </select>
+                `;
+                container.appendChild(row);
+            }
+        }
+        window.renderizarSelecaoDeuses = renderizarSelecaoDeuses;
+
+        function renderizarPainelJogadores() {
+            const panel = document.getElementById("players-panel");
+            if (!panel) return;
+            panel.innerHTML = "";
+
+            jogadores.forEach((j, idx) => {
+                const ehVez = idx === turnoAtual && !j.falido;
+                const card = document.createElement("div");
+                card.className = `bg-slate-900 border-2 ${ehVez ? 'border-amber-400 shadow-lg shadow-amber-500/20 scale-[1.02]' : 'border-slate-800 opacity-90'} rounded-xl p-2 sm:p-2.5 transition-all relative overflow-hidden`;
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-1">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-base sm:text-lg">${j.deus.icon}</span>
+                            <span class="font-cinzel font-bold text-xs sm:text-sm ${j.deus.cor} truncate max-w-[90px] sm:max-w-[120px]">${j.nome}</span>
+                        </div>
+                        ${ehVez ? '<span class="text-[9px] bg-amber-500 text-slate-950 font-black px-1.5 py-0.5 rounded uppercase">VEZ</span>' : ''}
+                    </div>
+                    <div class="flex items-center justify-between text-[11px] font-mono">
+                        <span class="text-slate-400">Saldo:</span>
+                        <strong class="text-emerald-400 font-bold">$ ${j.saldo.toLocaleString()}</strong>
+                    </div>
+                    <div class="flex items-center justify-between text-[9px] text-slate-400 mt-0.5">
+                        <span>Posição:</span>
+                        <span class="text-amber-300 font-semibold truncate">${TABULEIRO_CASAS[j.pos].nome}</span>
+                    </div>
+                `;
+                panel.appendChild(card);
+            });
+        }
+
+        function atualizarPosicoesPeoes() {
+            jogadores.forEach((j) => {
+                const pawn = document.getElementById(`pawn-${j.id}`);
+                if (!pawn) return;
+                
+                if (j.falido) {
+                    pawn.classList.add("hidden");
+                    return;
+                }
+                
+                pawn.classList.remove("hidden");
+                const posCasa = POSICOES_CASAS[j.pos];
+                if (posCasa) {
+                    const offset = (j.id - 1) * 6;
+                    pawn.style.top = `calc(${posCasa.top} + ${offset}px)`;
+                    pawn.style.left = `calc(${posCasa.left} + ${offset}px)`;
+                }
+            });
+        }
+
+        function atualizarStatusTurno() {
+            const j = jogadores[turnoAtual];
+            const turnInd = document.getElementById("turn-indicator");
+            const btnRoll = document.getElementById("btn-roll");
+            const statusTxt = document.getElementById("status-text");
+
+            if (turnInd) turnInd.textContent = `VEZ DE: ${j.nome} (${j.deus.nome})`;
+            if (statusTxt) statusTxt.innerHTML = `Vez do jogador <strong>${j.nome}</strong>. Role o dado para se movimentar.`;
+            
+            if (btnRoll) {
+                if (j.isAi) {
+                    btnRoll.disabled = true;
+                    btnRoll.className = "bg-slate-800 text-slate-500 font-cinzel font-bold px-6 py-3 rounded-xl text-sm cursor-not-allowed opacity-60";
+                    btnRoll.textContent = "🤖 IA PENSANDO...";
+                    setTimeout(jogarTurnoAI, 1200);
+                } else {
+                    btnRoll.disabled = false;
+                    btnRoll.className = "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-cinzel font-black px-6 py-3 rounded-xl shadow-lg text-sm cursor-pointer hover:scale-105 active:scale-95 transition-all";
+                    btnRoll.textContent = "🎲 ROLAR DADO";
+                }
+            }
+            renderizarPainelJogadores();
+            atualizarPosicoesPeoes();
+        }
+
+        function adicionarHistorico(msg) {
+            const hist = document.getElementById("event-history");
+            if (!hist) return;
+            const li = document.createElement("li");
+            li.innerHTML = `• ${msg}`;
+            hist.insertBefore(li, hist.firstChild);
+        }
+
+        function jogarTurno() {
+            if (jogando || jogoEncerrado) return;
+            const j = jogadores[turnoAtual];
+            if (j.isAi) return;
+            executarRolagemDado();
+        }
+
+        function jogarTurnoAI() {
+            if (jogando || jogoEncerrado) return;
+            executarRolagemDado();
+        }
+
+        function executarRolagemDado() {
+            jogando = true;
+            const diceModal = document.getElementById("dice-modal");
+            const dice3d = document.getElementById("big-dice-3d");
+            const diceResult = document.getElementById("dice-result-text");
+            
+            if (diceModal) diceModal.classList.remove("hidden");
+            if (dice3d) {
+                dice3d.style.transform = "";
+                dice3d.classList.add("dice-rolling");
+            }
+            if (diceResult) diceResult.textContent = "Lançando os dados divinos...";
+
+            setTimeout(() => {
+                const resultado = Math.floor(1 + Math.random() * 6);
+                const rotacoesDado = {
+                    1: "rotateX(0deg) rotateY(0deg)",
+                    2: "rotateX(0deg) rotateY(-90deg)",
+                    3: "rotateX(0deg) rotateY(-180deg)",
+                    4: "rotateX(0deg) rotateY(90deg)",
+                    5: "rotateX(-90deg) rotateY(0deg)",
+                    6: "rotateX(90deg) rotateY(0deg)"
+                };
+                if (dice3d) {
+                    dice3d.classList.remove("dice-rolling");
+                    void dice3d.offsetWidth;
+                    dice3d.style.transition = "transform 0.5s ease-out";
+                    dice3d.style.transform = rotacoesDado[resultado];
+                }
+                if (diceResult) diceResult.textContent = `Resultado: ${resultado}!`;
+
+                setTimeout(() => {
+                    if (diceModal) diceModal.classList.add("hidden");
+                    const diceBox = document.getElementById("dice-box");
+                    if (diceBox) diceBox.textContent = resultado;
+                    if (window.modoJogo === 'online') {
+                        transmitirParaConectados({
+                            tipo: 'SYNC_ROLAR_DADO',
+                            jogadorId: jogadores[turnoAtual].id,
+                            resultado: resultado
+                        });
+                    }
+                    if (typeof moverJogadorComAnimacao === "function") {
+                        moverJogadorComAnimacao(resultado);
+                    }
+                }, 1200);
+            }, 1000);
+        }
+
+        function atualizarBadgesProprietarios() {
+            TABULEIRO_CASAS.forEach(casa => {
+                if (casa.tipo === "propriedade") {
+                    const badge = document.getElementById(`owner-badge-${casa.id}`);
+                    if (badge) {
+                        if (casa.dono !== null) {
+                            const donoObj = jogadores.find(x => x.id === casa.dono);
+                            badge.textContent = donoObj ? donoObj.deus.icon : "🏛️";
+                            badge.classList.remove("hidden");
+                            badge.className = "absolute top-0.5 right-0.5 text-[8px] font-extrabold px-1 py-0.2 rounded z-20 shadow-md bg-slate-900/90 border border-amber-400/60";
+                        } else {
+                            badge.classList.add("hidden");
+                        }
+                    }
+                }
+            });
+        }
+
+        function moverJogadorComAnimacao(passosRestantes) {
+            const j = jogadores[turnoAtual];
+
+            if (j.preso) {
+                if (passosRestantes === 6) {
+                    j.preso = false;
+                    j.turnosPreso = 0;
+                    adicionarHistorico(`🔥 <strong>${j.nome}</strong> tirou 6 no dado e escapou do Tártaro!`);
+                } else {
+                    j.turnosPreso++;
+                    if (j.turnosPreso >= 3) {
+                        j.preso = false;
+                        j.turnosPreso = 0;
+                        adicionarHistorico(`🔥 <strong>${j.nome}</strong> cumpriu sua pena (3 rodadas) e saiu do Tártaro.`);
+                    } else {
+                        adicionarHistorico(`🔥 <strong>${j.nome}</strong> tirou ${passosRestantes} e continua preso no Tártaro (${j.turnosPreso}/3 rodadas).`);
+                        finalizarTurno();
+                        return;
+                    }
+                }
+            }
+
+            let passosDados = 0;
+            const intervaloCaminhada = setInterval(() => {
+                const antigaPos = j.pos;
+                j.pos = (j.pos + 1) % TABULEIRO_CASAS.length;
+                passosDados++;
+
+                if (j.pos === 0 && antigaPos !== 0) {
+                    j.saldo += 200;
+                    adicionarHistorico(`⚡ <strong>${j.nome}</strong> passou pelos Portões do Olimpo e recebeu +$200.`);
+                }
+
+                atualizarPosicoesPeoes();
+                renderizarPainelJogadores();
+
+                if (passosDados >= passosRestantes) {
+                    clearInterval(intervaloCaminhada);
+                    setTimeout(() => {
+                        processarCasaAtual();
+                    }, 250);
+                }
+            }, 300);
+        }
+
+        function processarCasaAtual() {
+            const j = jogadores[turnoAtual];
+            const casa = TABULEIRO_CASAS[j.pos];
+
+            adicionarHistorico(`📍 <strong>${j.nome}</strong> caiu em <strong>${casa.nome}</strong>.`);
+
+            if (casa.tipo === "propriedade") {
+                if (casa.dono === null) {
+                    if (j.isAi) {
+                        if (j.saldo >= casa.valor) {
+                            j.saldo -= casa.valor;
+                            casa.dono = j.id;
+                            adicionarHistorico(`🏛️ <strong>${j.nome}</strong> (IA) adquiriu <strong>${casa.nome}</strong> por $${casa.valor}!`);
+                            atualizarBadgesProprietarios();
+                            renderizarPainelJogadores();
+                        }
+                        finalizarTurno();
+                    } else {
+                        abrirModalCompra(casa);
+                    }
+                } else if (casa.dono === j.id) {
+                    adicionarHistorico(`🛡️ <strong>${j.nome}</strong> visitou seu próprio território.`);
+                    if (!j.isAi) verificarEvolucaoPropriedade(casa, true);
+                    else finalizarTurno();
+                } else {
+                    const donoObj = jogadores.find(x => x.id === casa.dono);
+                    let aluguelFinal = casa.aluguel;
+                    if (casa.nivel === 1) aluguelFinal = casa.temploAluguel;
+                    else if (casa.nivel === 2) aluguelFinal = casa.temploAluguel * 2;
+                    else if (casa.nivel === 3) aluguelFinal = casa.temploAluguel * 3;
+                    else if (casa.nivel >= 4) aluguelFinal = casa.temploAluguel * 5;
+
+                    if (j.imunidadeTaxa) {
+                        j.imunidadeTaxa = false;
+                        adicionarHistorico(`🦉 <strong>${j.nome}</strong> usou a Estratégia de Atena e evitou pagar aluguel!`);
+                        finalizarTurno();
+                    } else {
+                        j.saldo -= aluguelFinal;
+                        if (donoObj) donoObj.saldo += aluguelFinal;
+                        adicionarHistorico(`💸 <strong>${j.nome}</strong> pagou $${aluguelFinal} de aluguel a <strong>${donoObj ? donoObj.nome : 'Banco'}</strong>.`);
+                        verificarFalencia();
+                        if (!jogoEncerrado) finalizarTurno();
+                    }
+                }
+            } else if (casa.tipo === "bencao") {
+                ativarOraculoDelfos();
+            } else if (casa.tipo === "prisao") {
+                j.pos = 6;
+                j.preso = true;
+                j.turnosPreso = 0;
+                atualizarPosicoesPeoes();
+    

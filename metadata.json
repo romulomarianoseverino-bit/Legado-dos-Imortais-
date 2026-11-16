@@ -1,0 +1,6 @@
+{
+  "name": "Legado dos Imortais: Edição Lendária",
+  "description": "Edição Lendária de Deuses & Bênçãos: Jogo mitológico de tabuleiro com deuses do Olimpo, compra e evolução de territórios e modo online.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
