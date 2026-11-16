@@ -6862,8 +6862,8 @@
                         statusBox.className = 'text-xs p-2.5 rounded-xl border border-emerald-500/50 bg-emerald-950/40 text-emerald-300 space-y-1';
                         statusBox.innerHTML = `
                             <div class="font-bold">✅ Atualização aplicada com sucesso!</div>
-                            <div>Cópia de segurança criada em: <span class="font-mono text-amber-300">${data.backupFolder}</span></div>
-                            <div>Arquivos aplicados: <span class="font-mono">${data.appliedFiles?.join(', ')}</span></div>
+                            <div>Cópia de segurança criada em: <span class="font-mono text-amber-300">${escapeHTML(String(data.backupFolder || ''))}</span></div>
+                            <div>Arquivos aplicados: <span class="font-mono">${escapeHTML((Array.isArray(data.appliedFiles) ? data.appliedFiles : []).map(String).join(', '))}</span></div>
                             <div class="text-[10px] text-slate-400 mt-1">A página será recarregada em 3 segundos para sincronizar as novidades...</div>
                         `;
                     }
@@ -8041,10 +8041,17 @@
                 }
                 listEl.innerHTML = list.map(o => `
                     <div class="inline-flex items-center gap-1 bg-slate-950 border border-purple-500/40 rounded-lg px-2 py-0.5">
-                        <button type="button" onclick="equiparVestimentaSalva3D('${escapeHTML(o.id)}')" class="text-purple-200 hover:text-amber-300 font-bold cursor-pointer">${escapeHTML(o.nome)}</button>
-                        <button type="button" onclick="removerVestimentaSalva3D('${escapeHTML(o.id)}')" title="Excluir vestimenta" class="text-red-400 hover:text-red-300 cursor-pointer ml-1">✕</button>
+                        <button type="button" data-outfit-action="equip" data-outfit-id="${escapeHTML(o.id)}" class="text-purple-200 hover:text-amber-300 font-bold cursor-pointer">${escapeHTML(o.nome)}</button>
+                        <button type="button" data-outfit-action="remove" data-outfit-id="${escapeHTML(o.id)}" title="Excluir vestimenta" class="text-red-400 hover:text-red-300 cursor-pointer ml-1">✕</button>
                     </div>
                 `).join('');
+                listEl.querySelectorAll('[data-outfit-action]').forEach((button) => {
+                    const id = button.getAttribute('data-outfit-id') || '';
+                    button.addEventListener('click', () => {
+                        if (button.getAttribute('data-outfit-action') === 'equip') equiparVestimentaSalva3D(id);
+                        else removerVestimentaSalva3D(id);
+                    });
+                });
             } catch {}
         }
 
