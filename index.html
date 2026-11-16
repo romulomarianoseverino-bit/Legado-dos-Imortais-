@@ -2918,7 +2918,7 @@
         function obterImagemRasterDataUrlSegura(value) {
             const dataUrl = String(value || '');
             if (dataUrl.length > 512 * 1024) return null;
-            return /^data:image\\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(dataUrl)
+            return /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(dataUrl)
                 ? dataUrl
                 : null;
         }
