@@ -2,6 +2,7 @@ import express from 'express';
 import http from 'http';
 import crypto from 'crypto';
 import { WebSocketServer, WebSocket } from 'ws';
+import { getNextRoomPlayerId } from './utils/playerIds';
 import {
   CHARACTER_CLASSES,
   applyClassStartingBalance,
@@ -680,7 +681,7 @@ export function createMultiplayerServer(): MultiplayerContext {
     }
 
     const { playerName, godId, classeId, peca3d } = req.body || {};
-    const newId = room.players.reduce((highest, player) => Math.max(highest, player.id), 0) + 1;
+    const newId = getNextRoomPlayerId(room.players);
     const god = pickGodObj(godId, newId - 1);
     const cls = typeof classeId === 'string' && classeId ? classeId : 'classico_equilibrado';
     const nick = sanitizeNick(playerName, `Guerreiro ${newId}`);
