@@ -2915,6 +2915,14 @@
                 .replace(/'/g, '&#39;');
         }
 
+        function obterImagemRasterDataUrlSegura(value) {
+            const dataUrl = String(value || '');
+            if (dataUrl.length > 512 * 1024) return null;
+            return /^data:image\\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(dataUrl)
+                ? dataUrl
+                : null;
+        }
+
         function processarMensagemRede(data, conn) {
             if (!data || typeof data !== 'object' || !data.tipo) return;
             const meuNick = localStorage.getItem("mitologico_nickname") || "Guerreiro";
@@ -5989,8 +5997,13 @@
             const pecaVencedor = vencedor.peca3d || (typeof obterPeca3DAtivaDoSlot === 'function' ? obterPeca3DAtivaDoSlot(vencedor.id) : null);
             if (winnerName) winnerName.textContent = vencedor.nome;
             if (godIcon) {
-                if (pecaVencedor && pecaVencedor.thumbDataUrl) {
-                    godIcon.innerHTML = `<img src="${pecaVencedor.thumbDataUrl}" alt="${escapeHTML(pecaVencedor.nome || 'Peça 3D')}" class="w-16 h-16 mx-auto rounded-2xl object-contain bg-slate-900 border border-amber-400/60 p-1 shadow-lg" />`;
+                const safeThumb = obterImagemRasterDataUrlSegura(pecaVencedor?.thumbDataUrl);
+                if (safeThumb) {
+                    const image = document.createElement('img');
+                    image.src = safeThumb;
+                    image.alt = String(pecaVencedor?.nome || 'Peça 3D').substring(0, 48);
+                    image.className = 'w-16 h-16 mx-auto rounded-2xl object-contain bg-slate-900 border border-amber-400/60 p-1 shadow-lg';
+                    godIcon.replaceChildren(image);
                 } else {
                     godIcon.textContent = vencedor.deus?.icon || vencedor.deus?.icone || '⚡';
                 }
@@ -7222,8 +7235,13 @@
                             peca.thumbDataUrl = null;
                         }
                     }
-                    if (peca.thumbDataUrl) {
-                        pawn.innerHTML = `<img src="${peca.thumbDataUrl}" alt="${escapeHTML(peca.nome || 'Peça 3D')}" class="w-full h-full object-contain scale-125 pointer-events-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]" />`;
+                    const safeThumb = obterImagemRasterDataUrlSegura(peca.thumbDataUrl);
+                    if (safeThumb) {
+                        const image = document.createElement('img');
+                        image.src = safeThumb;
+                        image.alt = String(peca.nome || 'Peça 3D').substring(0, 48);
+                        image.className = 'w-full h-full object-contain scale-125 pointer-events-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]';
+                        pawn.replaceChildren(image);
                         pawn.title = `${j.nome} — Peça 3D: ${peca.nome}`;
                         continue;
                     }
