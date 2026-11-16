@@ -745,8 +745,9 @@ export function createPlayerEconomyRouter(opts: PlayerEconomyRouterOptions): exp
   // =============================================================
   // ETAPA 9: OPTIONAL REWARDED ADS POLICY (HONEST PROVIDER CHECK)
   // =============================================================
-  const isAdProviderConfigured = () =>
-    process.env.AD_PROVIDER_CONFIGURED === 'true' && Boolean(process.env.AD_SDK_WEBHOOK_SECRET);
+  // Nenhum SDK/webhook foi integrado neste projeto. Não anuncie disponibilidade
+  // apenas porque variáveis de ambiente foram preenchidas manualmente.
+  const isAdProviderConfigured = () => false;
 
   router.get('/economy/ads/status', (_req, res) => {
     res.json({
