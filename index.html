@@ -3109,13 +3109,20 @@
         }
 
         function receberConviteSalaRede(remetente, codigoSala, nomeSala) {
-            const safeRem = escapeHTML(remetente);
-            const safeCod = escapeHTML(codigoSala);
-            const safeNom = escapeHTML(nomeSala);
-            const encRem = encodeURIComponent(remetente);
-            const encCod = encodeURIComponent(codigoSala);
-            const encNom = encodeURIComponent(nomeSala);
-            adicionarHistorico(`📩 <strong>${safeRem}</strong> convidou você para a sala <strong>${safeNom}</strong> (${safeCod}). <button type="button" onclick="conectarPeerESala(decodeURIComponent('${encRem}'), decodeURIComponent('${encCod}'), decodeURIComponent('${encNom}'))" class="bg-blue-600 text-white px-2 py-0.5 rounded text-[10px] font-bold ml-1 cursor-pointer">Entrar</button>`);
+            const safeRem = String(remetente || '').trim().substring(0, 24);
+            const safeCod = String(codigoSala || '').trim().substring(0, 32);
+            const safeNom = String(nomeSala || '').trim().substring(0, 32);
+            adicionarHistorico(`📩 <strong>${escapeHTML(safeRem)}</strong> convidou você para a sala <strong>${escapeHTML(safeNom)}</strong> (${escapeHTML(safeCod)}).`);
+
+            const history = document.getElementById('event-history');
+            const entry = history?.firstElementChild;
+            if (!entry) return;
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'bg-blue-600 text-white px-2 py-0.5 rounded text-[10px] font-bold ml-1 cursor-pointer';
+            button.textContent = 'Entrar';
+            button.addEventListener('click', () => conectarPeerESala(safeRem, safeCod, safeNom));
+            entry.append(' ', button);
         }
 
         function copiarCodigoSalaAntigo() {
@@ -4063,7 +4070,34 @@
             const hist = document.getElementById("event-history");
             if (!hist) return;
             const li = document.createElement("li");
-            li.innerHTML = `• ${msg}`;
+            li.appendChild(document.createTextNode('• '));
+
+            // Converte mensagens antigas para DOM seguro: só texto e formatação básica.
+            // Nenhum atributo, evento inline, botão, imagem ou script vindo da mensagem é copiado.
+            const parsed = new DOMParser().parseFromString(String(msg ?? ''), 'text/html');
+            const appendSafeNodes = (source, target) => {
+                source.childNodes.forEach((node) => {
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        target.appendChild(document.createTextNode(node.textContent || ''));
+                        return;
+                    }
+                    if (node.nodeType !== Node.ELEMENT_NODE) return;
+                    const tag = node.tagName.toLowerCase();
+                    if (tag === 'br') {
+                        target.appendChild(document.createElement('br'));
+                        return;
+                    }
+                    if (tag === 'strong' || tag === 'b' || tag === 'em') {
+                        const safeTag = tag === 'b' ? 'strong' : tag;
+                        const safeElement = document.createElement(safeTag);
+                        target.appendChild(safeElement);
+                        appendSafeNodes(node, safeElement);
+                        return;
+                    }
+                    appendSafeNodes(node, target);
+                });
+            };
+            appendSafeNodes(parsed.body, li);
             hist.insertBefore(li, hist.firstChild);
             if (hist.children.length > 80) {
                 hist.removeChild(hist.lastChild);
