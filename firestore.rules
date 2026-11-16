@@ -1,0 +1,237 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Pillar 4.1: Global Safety Net (Default-Deny Catch-All)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ---------------------------------------------------------
+    // Global Hardened Primitives
+    // ---------------------------------------------------------
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isVerified() && request.auth.uid == userId;
+    }
+
+    // ---------------------------------------------------------
+    // Entity Validation Blueprints (Never reference existing/diff)
+    // ---------------------------------------------------------
+    function isValidPlayerPublicProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'displayName', 'godId', 'wins', 'losses', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'displayName', 'godId', 'photoUrl', 'wins', 'losses', 'createdAt', 'updatedAt'])
+        && data.uid is string
+        && data.uid.size() >= 1 && data.uid.size() <= 128
+        && data.uid.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.uid == userId
+        && data.uid == request.auth.uid
+        && data.displayName is string
+        && data.displayName.size() >= 2 && data.displayName.size() <= 32
+        && data.godId is string
+        && data.godId.size() >= 2 && data.godId.size() <= 24
+        && data.godId.matches('^[a-zA-Z0-9_\\-]+$')
+        && (!data.keys().hasAny(['photoUrl']) || (data.photoUrl is string && data.photoUrl.size() <= 512))
+        && data.wins is int && data.wins >= 0 && data.wins <= 1000000
+        && data.losses is int && data.losses >= 0 && data.losses <= 1000000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPlayerPrivateInfo(data, userId) {
+      return data.keys().hasAll(['uid', 'shareRankingWithFriends', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'email', 'linkedLegacyUsername', 'shareRankingWithFriends', 'createdAt', 'updatedAt'])
+        && data.uid is string
+        && data.uid.size() >= 1 && data.uid.size() <= 128
+        && data.uid.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.uid == userId
+        && data.uid == request.auth.uid
+        && (!data.keys().hasAny(['email']) || (data.email is string && data.email.size() <= 254))
+        && (!data.keys().hasAny(['linkedLegacyUsername']) || (data.linkedLegacyUsername is string && data.linkedLegacyUsername.size() <= 32))
+        && data.shareRankingWithFriends is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCloudSavedPiece(data, userId, pieceId) {
+      return data.keys().hasAll(['id', 'ownerId', 'nome', 'tipo', 'estilo', 'classeId', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'ownerId', 'nome', 'tipo', 'estilo', 'classeId', 'charConfig', 'createdAt', 'updatedAt'])
+        && data.id is string
+        && data.id.size() >= 1 && data.id.size() <= 64
+        && data.id.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.id == pieceId
+        && data.ownerId is string
+        && data.ownerId.size() >= 1 && data.ownerId.size() <= 128
+        && data.ownerId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && data.nome is string
+        && data.nome.size() >= 2 && data.nome.size() <= 32
+        && data.tipo in ['character3d', 'preset', 'glb']
+        && data.estilo is string
+        && data.estilo.size() >= 2 && data.estilo.size() <= 24
+        && data.classeId is string
+        && data.classeId.size() >= 2 && data.classeId.size() <= 32
+        && (!data.keys().hasAny(['charConfig']) || (data.charConfig is map && data.charConfig.keys().size() <= 40))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCloudCustomBoard(data, boardId) {
+      return data.keys().hasAll(['id', 'authorId', 'authorName', 'nome', 'tema', 'totalCasas', 'isPublic', 'casas', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'authorId', 'authorName', 'nome', 'tema', 'totalCasas', 'isPublic', 'casas', 'createdAt', 'updatedAt'])
+        && data.id is string
+        && data.id.size() >= 1 && data.id.size() <= 64
+        && data.id.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.id == boardId
+        && data.authorId is string
+        && data.authorId.size() >= 1 && data.authorId.size() <= 128
+        && data.authorId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.authorId == request.auth.uid
+        && data.authorName is string
+        && data.authorName.size() >= 2 && data.authorName.size() <= 32
+        && data.nome is string
+        && data.nome.size() >= 3 && data.nome.size() <= 36
+        && data.tema is string
+        && data.tema.size() >= 2 && data.tema.size() <= 32
+        && data.totalCasas is int && data.totalCasas >= 8 && data.totalCasas <= 24
+        && data.isPublic is bool
+        && data.casas is list
+        && data.casas.size() >= 8 && data.casas.size() <= 24
+        && data.casas.size() == data.totalCasas
+        && data.casas[0] is map
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // ---------------------------------------------------------
+    // Boot Connection Probe (strictly get on single sentinel doc)
+    // ---------------------------------------------------------
+    match /test/{docId} {
+      allow get: if docId == 'connection';
+      allow list, create, update, delete: if false;
+    }
+
+    // ---------------------------------------------------------
+    // Collection Rules
+    // ---------------------------------------------------------
+    match /playersPublic/{userId} {
+      allow get: if isValidId(userId) && isSignedIn();
+      allow list: if isSignedIn() && resource.data.uid is string && resource.data.wins is int;
+
+      allow create: if isValidId(userId)
+        && isOwner(userId)
+        && isValidPlayerPublicProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isValidId(userId)
+        && isOwner(userId)
+        && isValidPlayerPublicProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'godId', 'photoUrl', 'updatedAt'])
+          || incoming().diff(existing()).affectedKeys().hasOnly(['wins', 'losses', 'updatedAt'])
+        );
+
+      allow delete: if isValidId(userId) && isOwner(userId);
+
+      match /savedPieces/{pieceId} {
+        allow get: if isValidId(userId) && isValidId(pieceId) && isOwner(userId)
+          && get(/databases/$(database)/documents/playersPublic/$(userId)).data.uid == request.auth.uid;
+        allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+
+        allow create: if isValidId(userId)
+          && isValidId(pieceId)
+          && isOwner(userId)
+          && isValidCloudSavedPiece(incoming(), userId, pieceId)
+          && exists(/databases/$(database)/documents/playersPublic/$(userId))
+          && get(/databases/$(database)/documents/playersPublic/$(userId)).data.uid == request.auth.uid
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+
+        allow update: if isValidId(userId)
+          && isValidId(pieceId)
+          && isOwner(userId)
+          && isValidCloudSavedPiece(incoming(), userId, pieceId)
+          && get(/databases/$(database)/documents/playersPublic/$(userId)).data.uid == request.auth.uid
+          && incoming().id == existing().id
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly(['nome', 'tipo', 'estilo', 'classeId', 'charConfig', 'updatedAt']);
+
+        allow delete: if isValidId(userId) && isValidId(pieceId) && isOwner(userId)
+          && get(/databases/$(database)/documents/playersPublic/$(userId)).data.uid == request.auth.uid;
+      }
+    }
+
+    match /playersPrivate/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId);
+      allow list: if false;
+
+      allow create: if isValidId(userId)
+        && isOwner(userId)
+        && isValidPlayerPrivateInfo(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isValidId(userId)
+        && isOwner(userId)
+        && isValidPlayerPrivateInfo(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['email', 'linkedLegacyUsername', 'shareRankingWithFriends', 'updatedAt']);
+
+      allow delete: if isValidId(userId) && isOwner(userId);
+    }
+
+    match /communityBoards/{boardId} {
+      allow get: if isValidId(boardId) && isSignedIn() && (existing().isPublic == true || existing().authorId == request.auth.uid);
+      allow list: if isSignedIn() && (resource.data.isPublic == true || resource.data.authorId == request.auth.uid);
+
+      allow create: if isValidId(boardId)
+        && isVerified()
+        && isValidCloudCustomBoard(incoming(), boardId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isValidId(boardId)
+        && isVerified()
+        && existing().authorId == request.auth.uid
+        && isValidCloudCustomBoard(incoming(), boardId)
+        && incoming().id == existing().id
+        && incoming().authorId == existing().authorId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['authorName', 'nome', 'tema', 'totalCasas', 'isPublic', 'casas', 'updatedAt']);
+
+      allow delete: if isValidId(boardId)
+        && isVerified()
+        && existing().authorId == request.auth.uid;
+    }
+  }
+}

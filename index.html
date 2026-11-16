@@ -2337,6 +2337,32 @@
 
             <!-- Barra de Sessão / Autenticação -->
             <div id="account-auth-banner" class="bg-slate-950/90 border border-slate-800 rounded-2xl p-3 space-y-2.5 text-xs">
+                <!-- Firebase Google Auth + Firestore Cloud Sync -->
+                <div id="firebase-cloud-auth-box" class="bg-slate-900/90 border border-amber-500/35 rounded-xl p-2.5 flex flex-wrap items-center justify-between gap-2">
+                    <div id="firebase-logged-out" class="flex flex-wrap items-center justify-between gap-2 w-full">
+                        <div>
+                            <strong class="text-amber-300 font-cinzel block text-xs">☁️ Conta Google &amp; Nuvem Firestore</strong>
+                            <span id="firebase-auth-status-text" class="text-[10px] text-slate-400">Conecte com o Google para salvar guerreiros 3D, tabuleiros e perfil na nuvem Firebase.</span>
+                        </div>
+                        <button type="button" onclick="entrarComGoogleFirebase()" class="bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs px-3.5 py-2 rounded-xl cursor-pointer shadow-md flex items-center gap-1.5">
+                            <span>🔐</span>
+                            <span>Entrar com Google</span>
+                        </button>
+                    </div>
+                    <div id="firebase-logged-in" class="hidden flex flex-wrap items-center justify-between gap-2 w-full">
+                        <div class="flex items-center gap-2.5">
+                            <img id="firebase-user-avatar" src="/assets/images/legado_dos_imortais_artwork.jpg" alt="Avatar" class="w-8 h-8 rounded-full object-cover border border-amber-400/70" />
+                            <div>
+                                <strong id="firebase-user-name" class="text-xs font-cinzel text-amber-300 block">Guerreiro Google</strong>
+                                <span id="firebase-user-cloud-meta" class="text-[10px] text-emerald-400">☁️ Firestore ativo</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="sincronizarNuvemFirebaseAgora()" class="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/50 text-amber-200 text-[11px] font-bold px-2.5 py-1.5 rounded-lg cursor-pointer">🔄 Sincronizar Nuvem</button>
+                            <button type="button" onclick="sairGoogleFirebase()" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 text-[11px] font-bold px-2.5 py-1.5 rounded-lg cursor-pointer">Sair Google</button>
+                        </div>
+                    </div>
+                </div>
                 <div id="account-logged-out-box" class="space-y-2">
                     <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
                         <input id="acc-username" type="text" maxlength="20" placeholder="Usuário (3-20 letras/núm)" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-amber-200" />
@@ -6144,6 +6170,18 @@
                     }
                 }
             } catch {}
+
+            try {
+                const fb = window.LegadoFirebase;
+                const u = fb?.auth?.currentUser;
+                if (status === 'completed' && fb && u) {
+                    const localPlayerId = typeof obterJogadorLocalOnlineId === 'function' ? obterJogadorLocalOnlineId() : 1;
+                    const won = Boolean(vencedor && (vencedor.id === localPlayerId || vencedor.id === 1));
+                    const nick = document.getElementById('nickname-input')?.value?.trim() || localStorage.getItem('mitologico_nickname') || u.displayName || 'Guerreiro';
+                    const godId = (typeof jogadoresConfig !== 'undefined' && jogadoresConfig?.[0]?.deusId) || 'zeus';
+                    await fb.recordPlayerMatchOutcomeCloud(u, won, nick, godId);
+                }
+            } catch {}
         }
 
         function salvarRegistroPartida(vencedor, vitoriaLocal, status = 'completed') {
@@ -7637,6 +7675,13 @@
             };
             rec.thumbDataUrl = await mod.renderPieceThumbnailDataUrl(rec);
             await mod.Pecas3DStorage.salvar(rec);
+            try {
+                const fb = window.LegadoFirebase;
+                const u = fb?.auth?.currentUser;
+                if (fb && u) {
+                    await fb.savePieceToCloud(u, { id: rec.id, nome: rec.nome, tipo: 'preset', estilo: rec.estiloVisual, classeId: 'classico_equilibrado' });
+                }
+            } catch {}
             if (equiparTambem) {
                 await equiparPecaNoSlot3D(oficinaSlotAtual, rec);
             } else {
@@ -8081,6 +8126,20 @@
             };
             rec.thumbDataUrl = await mod.renderPieceThumbnailDataUrl(rec);
             await mod.Pecas3DStorage.salvar(rec);
+            try {
+                const fb = window.LegadoFirebase;
+                const u = fb?.auth?.currentUser;
+                if (fb && u) {
+                    await fb.savePieceToCloud(u, {
+                        id: rec.id,
+                        nome: rec.nome,
+                        tipo: 'character3d',
+                        estilo: rec.estiloVisual,
+                        classeId: (typeof obterClasseSelecionadaJogador1 === 'function' ? obterClasseSelecionadaJogador1() : 'classico_equilibrado'),
+                        charConfig: cfg
+                    });
+                }
+            } catch {}
             if (equiparTambem) {
                 await equiparPecaNoSlot3D(oficinaSlotAtual, rec);
             } else {
@@ -9030,11 +9089,27 @@
         async function publicarTabuleiroNaGaleria() {
             atualizarPreviewCriadorTabuleiro();
             const token = localStorage.getItem(PLAYER_TOKEN_STORAGE_KEY);
+            const fb = window.LegadoFirebase;
+            const fbUser = fb?.auth?.currentUser || null;
             const msgEl = document.getElementById('bc-validation-msg');
-            if (!token) {
+            if (!token && !fbUser) {
                 if (msgEl) {
-                    msgEl.textContent = '🔒 Entre na sua conta do Panteão (botão Conta) para publicar na Galeria.';
+                    msgEl.textContent = '🔒 Entre na sua conta do Panteão ou com Google (botão Conta) para publicar na Galeria.';
                     msgEl.className = 'text-[11px] min-h-[1rem] text-amber-300';
+                }
+                return;
+            }
+            let cloudOk = false;
+            if (fb && fbUser) {
+                try {
+                    await fb.publishBoardToCloud(fbUser, boardCreatorDraft, true);
+                    cloudOk = true;
+                } catch {}
+            }
+            if (!token && cloudOk) {
+                if (msgEl) {
+                    msgEl.textContent = '☁️ Tabuleiro publicado no Firestore com sucesso!';
+                    msgEl.className = 'text-[11px] min-h-[1rem] text-emerald-400';
                 }
                 return;
             }
@@ -9047,19 +9122,21 @@
                 const data = await res.json();
                 if (!res.ok) {
                     if (msgEl) {
-                        msgEl.textContent = `⚠️ ${data.error || 'Falha ao publicar tabuleiro.'}`;
-                        msgEl.className = 'text-[11px] min-h-[1rem] text-red-400';
+                        msgEl.textContent = cloudOk
+                            ? `☁️ Salvo no Firestore! Aviso servidor: ${data.error || 'erro parcial'}`
+                            : `⚠️ ${data.error || 'Falha ao publicar tabuleiro.'}`;
+                        msgEl.className = `text-[11px] min-h-[1rem] ${cloudOk ? 'text-amber-300' : 'text-red-400'}`;
                     }
                     return;
                 }
                 if (msgEl) {
-                    msgEl.textContent = '🌐 Tabuleiro publicado na Galeria Moderada!';
+                    msgEl.textContent = cloudOk ? '🌐☁️ Tabuleiro publicado na Galeria e no Firestore!' : '🌐 Tabuleiro publicado na Galeria Moderada!';
                     msgEl.className = 'text-[11px] min-h-[1rem] text-emerald-400';
                 }
             } catch {
                 if (msgEl) {
-                    msgEl.textContent = '⚠️ Servidor offline no momento.';
-                    msgEl.className = 'text-[11px] min-h-[1rem] text-red-400';
+                    msgEl.textContent = cloudOk ? '☁️ Tabuleiro salvo no Firestore (servidor local offline).' : '⚠️ Servidor offline no momento.';
+                    msgEl.className = `text-[11px] min-h-[1rem] ${cloudOk ? 'text-emerald-400' : 'text-red-400'}`;
                 }
             }
         }
@@ -9686,7 +9763,125 @@
             }
             restaurarTabuleiroEDadoSalvosNoInicio().catch(() => {});
             verificarAtualizacaoDisponivel().catch(() => {});
+            iniciarObservadorFirebase().catch(() => {});
         });
+
+        let cloudBoardsUnsubscribe = null;
+        function atualizarUiAuthFirebase(user) {
+            const outBox = document.getElementById('firebase-logged-out');
+            const inBox = document.getElementById('firebase-logged-in');
+            const nameEl = document.getElementById('firebase-user-name');
+            const metaEl = document.getElementById('firebase-user-cloud-meta');
+            const avatarEl = document.getElementById('firebase-user-avatar');
+            if (user) {
+                outBox?.classList.add('hidden');
+                inBox?.classList.remove('hidden');
+                if (nameEl) nameEl.textContent = user.displayName || user.email || 'Guerreiro Google';
+                if (avatarEl && user.photoURL) avatarEl.src = user.photoURL;
+                if (metaEl) metaEl.textContent = `☁️ Firestore conectado • ${user.email || 'Conta verificada'}`;
+            } else {
+                outBox?.classList.remove('hidden');
+                inBox?.classList.add('hidden');
+            }
+        }
+
+        async function iniciarObservadorFirebase() {
+            const mod = await aguardarModulo3D(5000);
+            const fb = mod?.Firebase || window.LegadoFirebase;
+            if (!fb || typeof fb.subscribeFirebaseAuth !== 'function') return;
+
+            fb.subscribeFirebaseAuth(async (user) => {
+                atualizarUiAuthFirebase(user);
+                if (typeof cloudBoardsUnsubscribe === 'function') {
+                    cloudBoardsUnsubscribe();
+                    cloudBoardsUnsubscribe = null;
+                }
+                if (user) {
+                    try {
+                        const nick = document.getElementById('nickname-input')?.value?.trim() || localStorage.getItem('mitologico_nickname') || user.displayName || 'Guerreiro';
+                        const godId = (typeof jogadoresConfig !== 'undefined' && jogadoresConfig?.[0]?.deusId) || 'zeus';
+                        await fb.ensurePlayerCloudProfile(user, {
+                            displayName: nick,
+                            godId,
+                            linkedLegacyUsername: currentPlayerAccount?.username || '',
+                            shareRankingWithFriends: true
+                        });
+                        const snap = await fb.getPlayerCloudSnapshot(user);
+                        const metaEl = document.getElementById('firebase-user-cloud-meta');
+                        if (metaEl) {
+                            const w = snap.publicProfile?.wins ?? 0;
+                            metaEl.textContent = `☁️ Firestore conectado • ${snap.savedPiecesCount || 0} peças na nuvem • ${w} vitórias`;
+                        }
+                        if (typeof fb.subscribePublicCloudBoards === 'function') {
+                            cloudBoardsUnsubscribe = fb.subscribePublicCloudBoards(() => {});
+                        }
+                    } catch (err) {
+                        console.warn('[Firebase Sync]', err);
+                    }
+                }
+            });
+        }
+
+        async function entrarComGoogleFirebase() {
+            const st = document.getElementById('firebase-auth-status-text');
+            const mod = await aguardarModulo3D(4500);
+            const fb = mod?.Firebase || window.LegadoFirebase;
+            if (!fb) {
+                if (st) st.textContent = '⚠️ Módulo Firebase ainda está carregando. Tente novamente em instantes.';
+                return;
+            }
+            try {
+                if (st) st.textContent = '⏳ Abrindo login seguro do Google...';
+                await fb.signInWithGoogle();
+            } catch (err) {
+                if (st) st.textContent = `⚠️ Não foi possível entrar com Google: ${err?.message || 'janela cancelada'}`;
+            }
+        }
+        window.entrarComGoogleFirebase = entrarComGoogleFirebase;
+
+        async function sairGoogleFirebase() {
+            const fb = window.LegadoFirebase;
+            if (!fb) return;
+            await fb.signOut();
+            atualizarUiAuthFirebase(null);
+        }
+        window.sairGoogleFirebase = sairGoogleFirebase;
+
+        async function sincronizarNuvemFirebaseAgora() {
+            const fb = window.LegadoFirebase;
+            const user = fb?.auth?.currentUser;
+            if (!fb || !user) return;
+            const metaEl = document.getElementById('firebase-user-cloud-meta');
+            if (metaEl) metaEl.textContent = '⏳ Sincronizando peças e perfil no Firestore...';
+            try {
+                const nick = document.getElementById('nickname-input')?.value?.trim() || localStorage.getItem('mitologico_nickname') || user.displayName || 'Guerreiro';
+                const godId = (typeof jogadoresConfig !== 'undefined' && jogadoresConfig?.[0]?.deusId) || 'zeus';
+                await fb.ensurePlayerCloudProfile(user, {
+                    displayName: nick,
+                    godId,
+                    linkedLegacyUsername: currentPlayerAccount?.username || '',
+                    shareRankingWithFriends: true
+                });
+                const localPieces = (await window.Legado3D?.Pecas3DStorage?.listar?.()) || [];
+                for (const p of localPieces.slice(0, 10)) {
+                    await fb.savePieceToCloud(user, {
+                        id: p.id,
+                        nome: p.nome,
+                        tipo: p.tipo === 'character' ? 'character3d' : (p.tipo === 'glb' ? 'glb' : 'preset'),
+                        estilo: p.estiloVisual || 'stylized3d',
+                        classeId: 'classico_equilibrado',
+                        charConfig: p.characterConfig || {}
+                    });
+                }
+                const snap = await fb.getPlayerCloudSnapshot(user);
+                if (metaEl) {
+                    metaEl.textContent = `✅ Sincronizado! ${snap.savedPiecesCount || 0} peças na nuvem`;
+                }
+            } catch (err) {
+                if (metaEl) metaEl.textContent = `⚠️ Erro de sincronização: ${err?.message || 'permissão'}`;
+            }
+        }
+        window.sincronizarNuvemFirebaseAgora = sincronizarNuvemFirebaseAgora;
 
         // Desbloquear, pausar em segundo plano e recuperar AudioContext/música no primeiro plano
         function retomarSistemaDeAudio() {

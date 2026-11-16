@@ -69,6 +69,7 @@ import {
   resolveDiceFaceRenderSpec,
   sanitizeDiceGlyph
 } from './customDice3d';
+import { LegadoFirebase } from './firebase';
 
 export type PieceKind = 'preset' | 'glb' | 'character' | 'photo-totem';
 export type PresetPieceId = 'spartan' | 'owl' | 'lion' | 'wolf' | 'pegasus' | 'dragon';
@@ -1569,6 +1570,8 @@ if (typeof window !== 'undefined') {
     normalizeAngleRad,
     PLANNED_MANIFEST_SAMPLE,
     compareSemver,
-    evaluateUpdateAvailability
+    evaluateUpdateAvailability,
+    Firebase: LegadoFirebase
   };
+  (window as Window & { LegadoFirebase?: unknown }).LegadoFirebase = LegadoFirebase;
 }

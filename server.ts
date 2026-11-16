@@ -648,7 +648,7 @@ app.use((req, res, next) => {
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
   res.setHeader('X-DNS-Prefetch-Control', 'off');
   res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
@@ -681,18 +681,22 @@ app.use((req, res, next) => {
     'wss://*.peerjs.com',
     'https://*.run.app',
     'wss://*.run.app',
+    'https://*.googleapis.com',
+    'https://*.firebaseio.com',
+    'wss://*.firebaseio.com',
+    'https://*.firebaseapp.com',
     ...(!isProd ? ['ws://localhost:3000', 'wss://localhost:3000'] : []),
     ...(appUrlOrigin ? [appUrlOrigin, appUrlOrigin.replace(/^http/, 'ws')] : [])
   ].join(' ');
 
-  // CSP restrita: Google Fonts, Tailwind CDN, Tone.js, PeerJS CDN/WSS, áudio local e frame-ancestors específicos do AI Studio
+  // CSP restrita: Google Fonts, Tailwind CDN, Tone.js, PeerJS, Firebase Auth/Firestore e frame-ancestors do AI Studio
   res.setHeader(
     'Content-Security-Policy',
     "default-src 'self'; " +
-    "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com/ajax/libs/tone/ https://unpkg.com/peerjs@1.5.2/; " +
+    "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com/ajax/libs/tone/ https://unpkg.com/peerjs@1.5.2/ https://apis.google.com https://*.firebaseapp.com; " +
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
     "font-src 'self' https://fonts.gstatic.com data:; " +
-    "img-src 'self' data: blob:; " +
+    "img-src 'self' data: blob: https://*.googleusercontent.com; " +
     `connect-src ${connectSrc}; ` +
     "media-src 'self' data: blob:; " +
     "worker-src 'self' blob:; " +
@@ -700,7 +704,7 @@ app.use((req, res, next) => {
     "base-uri 'self'; " +
     "form-action 'self'; " +
     `frame-ancestors ${frameAncestors}; ` +
-    "frame-src 'self';"
+    "frame-src 'self' https://*.firebaseapp.com https://accounts.google.com;"
   );
   next();
 });

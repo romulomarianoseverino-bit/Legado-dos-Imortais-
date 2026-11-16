@@ -1,0 +1,233 @@
+{
+  "entities": {
+    "PlayerPublicProfile": {
+      "title": "PlayerPublicProfile",
+      "description": "Public, non-PII progression and leaderboard metadata for an authenticated player.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID owning this public profile."
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 32,
+          "description": "Public warrior nickname displayed in lobbies and rankings."
+        },
+        "godId": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 24,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Selected patron Olympian deity identifier."
+        },
+        "photoUrl": {
+          "type": "string",
+          "maxLength": 512,
+          "description": "Optional profile avatar URL."
+        },
+        "wins": {
+          "type": "integer",
+          "description": "Total recorded victories."
+        },
+        "losses": {
+          "type": "integer",
+          "description": "Total recorded defeats."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when profile was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when profile was last updated."
+        }
+      },
+      "required": ["uid", "displayName", "godId", "wins", "losses", "createdAt", "updatedAt"]
+    },
+    "PlayerPrivateInfo": {
+      "title": "PlayerPrivateInfo",
+      "description": "Strictly private player PII and preferences isolated from public reads.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID matching document ID."
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 254,
+          "description": "Verified player email address."
+        },
+        "linkedLegacyUsername": {
+          "type": "string",
+          "maxLength": 32,
+          "description": "Optional linked server economy username."
+        },
+        "shareRankingWithFriends": {
+          "type": "boolean",
+          "description": "Privacy opt-in flag for friend rankings."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": ["uid", "shareRankingWithFriends", "createdAt", "updatedAt"]
+    },
+    "CloudSavedPiece": {
+      "title": "CloudSavedPiece",
+      "description": "Cloud-synced 3D warrior/piece customization belonging strictly to its creator.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Unique identifier for the saved 3D piece."
+        },
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Owner Firebase Auth UID."
+        },
+        "nome": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 32,
+          "description": "Display name of the 3D piece."
+        },
+        "tipo": {
+          "type": "string",
+          "enum": ["character3d", "preset", "glb"],
+          "description": "Piece construction mode."
+        },
+        "estilo": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 24,
+          "description": "Visual rendering style preset."
+        },
+        "classeId": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 32,
+          "description": "Assigned RPG character class."
+        },
+        "charConfig": {
+          "type": "object",
+          "description": "Native map of 3D anatomical/clothing parameters."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": ["id", "ownerId", "nome", "tipo", "estilo", "classeId", "createdAt", "updatedAt"]
+    },
+    "CloudCustomBoard": {
+      "title": "CloudCustomBoard",
+      "description": "Custom board configuration (8 to 24 tiles) created by a verified player.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Unique board identifier."
+        },
+        "authorId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Author Firebase Auth UID."
+        },
+        "authorName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 32,
+          "description": "Author display nickname."
+        },
+        "nome": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 36,
+          "description": "Board title."
+        },
+        "tema": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 32,
+          "description": "Visual board theme key."
+        },
+        "totalCasas": {
+          "type": "integer",
+          "description": "Perimeter tile count between 8 and 24."
+        },
+        "isPublic": {
+          "type": "boolean",
+          "description": "Whether the board is shared publicly."
+        },
+        "casas": {
+          "type": "array",
+          "description": "Bounded array (8..24) of tile specification maps."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": ["id", "authorId", "authorName", "nome", "tema", "totalCasas", "isPublic", "casas", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/playersPublic/{userId}": {
+      "schema": { "$ref": "#/entities/PlayerPublicProfile" },
+      "description": "Public player warrior profile without PII."
+    },
+    "/playersPrivate/{userId}": {
+      "schema": { "$ref": "#/entities/PlayerPrivateInfo" },
+      "description": "Private player PII (email, linked server account, privacy settings) restricted to owner."
+    },
+    "/playersPublic/{userId}/savedPieces/{pieceId}": {
+      "schema": { "$ref": "#/entities/CloudSavedPiece" },
+      "description": "Subcollection of player-owned cloud-synced 3D warriors under the player's public profile."
+    },
+    "/communityBoards/{boardId}": {
+      "schema": { "$ref": "#/entities/CloudCustomBoard" },
+      "description": "Community and personal cloud custom boards (8-24 tiles)."
+    }
+  }
+}
