@@ -2,8 +2,8 @@
 
 ## 1. Data Invariants
 1. **Zero Blanket PII Exposure:** Personal data (`email`, `linkedLegacyUsername`, privacy preferences) lives exclusively in `/playersPrivate/{userId}` and can only be read or written when `request.auth != null && request.auth.uid == userId && request.auth.token.email_verified == true`.
-2. **Public Profile Integrity:** `/playersPublic/{userId}` holds strictly non-PII profile fields (`uid`, `displayName`, `godId`, `wins`, `losses`, timestamps). `uid` must equal `request.auth.uid` and `userId`, and is immutable after creation.
-3. **Strict Resource Ownership for Saved 3D Pieces:** Documents in `/players/{userId}/savedPieces/{pieceId}` always enforce `ownerId == request.auth.uid == userId`, bounded strings, valid enum `tipo`, and immutable `createdAt`/`ownerId`/`id`.
+2. **Public Profile Integrity:** `/playersPublic/{userId}` holds strictly non-PII profile fields (`uid`, `displayName`, `godId`, `wins`, `losses`, timestamps). `uid` must equal `request.auth.uid` and `userId`, and is immutable after creation. The client may create initial zero counters but may not update `wins` or `losses`; match outcomes must be written by a trusted backend.
+3. **Strict Resource Ownership for Saved 3D Pieces:** Documents in `/playersPublic/{userId}/savedPieces/{pieceId}` always enforce `ownerId == request.auth.uid == userId`, bounded strings, valid enum `tipo`, and immutable `createdAt`/`ownerId`/`id`.
 4. **Community Board Perimeter Bounds:** Documents in `/communityBoards/{boardId}` always enforce `authorId == request.auth.uid`, `8 <= totalCasas <= 24`, `casas` bounded list matching `totalCasas`, and non-author reads restricted to `resource.data.isPublic == true`.
 5. **Server Timestamp Integrity:** Every `create` requires `createdAt == request.time && updatedAt == request.time`; every `update` requires `incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time`.
 
@@ -19,4 +19,4 @@
 9. **Private Board Scraping:** Authenticated `userB` reads or queries `/communityBoards` where `isPublic == false && authorId == 'userA'`.
 10. **Oversized Array / Denial of Wallet:** Create `/communityBoards/b1` with `casas` array length `50` or `totalCasas: 999`.
 11. **Value Type Poisoning on Update:** Update `/communityBoards/b1` setting `nome: 12345` or `nome` > 36 chars.
-12. **Author Hijack on Subcollection:** `userA` writes `/players/userB/savedPieces/p1` with `ownerId: "userA"`.
+12. **Author Hijack on Subcollection:** `userA` writes `/playersPublic/userB/savedPieces/p1` with `ownerId: "userA"`.
