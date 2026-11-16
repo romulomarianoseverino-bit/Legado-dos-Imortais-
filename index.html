@@ -9624,11 +9624,14 @@
                             </div>
                             <p class="text-[11px] text-slate-400 mt-1">${escapeHTML(item.descricao)}</p>
                         </div>
-                        <button type="button" ${has ? 'disabled' : ''} onclick="comprarCosmeticoLoja('${escapeHTML(item.id)}')" class="${has ? 'bg-emerald-900/50 text-emerald-300 cursor-default' : 'bg-purple-600 hover:bg-purple-500 text-white cursor-pointer'} font-bold py-1.5 rounded-lg text-[11px]">
+                        <button type="button" data-cosmetic-id="${escapeHTML(item.id)}" ${has ? 'disabled' : ''} class="${has ? 'bg-emerald-900/50 text-emerald-300 cursor-default' : 'bg-purple-600 hover:bg-purple-500 text-white cursor-pointer'} font-bold py-1.5 rounded-lg text-[11px]">
                             ${has ? '✅ Desbloqueado' : `🛒 Desbloquear (${item.priceCoins} 🪙)`}
                         </button>
                     </div>`;
                 }).join('');
+                grid.querySelectorAll('[data-cosmetic-id]').forEach((button) => {
+                    button.addEventListener('click', () => comprarCosmeticoLoja(button.getAttribute('data-cosmetic-id') || ''));
+                });
             } catch {}
         }
 
