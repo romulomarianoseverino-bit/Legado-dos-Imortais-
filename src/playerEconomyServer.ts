@@ -285,6 +285,18 @@ export function createPlayerEconomyRouter(opts: PlayerEconomyRouterOptions): exp
   router.use((req, res, next) => {
     const ip = opts.getClientIp(req);
     const now = Date.now();
+
+    // Evita crescimento ilimitado do mapa em processos de longa duração.
+    if (apiRateMap.size >= 10000) {
+      for (const [key, entry] of apiRateMap) {
+        if (now > entry.resetAt) apiRateMap.delete(key);
+      }
+      if (apiRateMap.size >= 10000) {
+        const oldestKey = apiRateMap.keys().next().value;
+        if (oldestKey) apiRateMap.delete(oldestKey);
+      }
+    }
+
     let rec = apiRateMap.get(ip);
     if (!rec || now > rec.resetAt) {
       rec = { count: 1, resetAt: now + 60_000 };
@@ -491,6 +503,15 @@ export function createPlayerEconomyRouter(opts: PlayerEconomyRouterOptions): exp
       const accounts = loadAccounts();
       const found = Object.values(accounts).find((a) => a.usernameKey === username.toLowerCase());
       if (!found || !verifyPasswordScrypt(password, found.passwordHash)) {
+        if (!loginFailures.has(failKey) && loginFailures.size >= 5000) {
+          for (const [key, value] of loginFailures) {
+            if (value.lockUntil <= now) loginFailures.delete(key);
+          }
+          if (loginFailures.size >= 5000) {
+            const oldestKey = loginFailures.keys().next().value;
+            if (oldestKey) loginFailures.delete(oldestKey);
+          }
+        }
         const nextFails = (failRec?.fails || 0) + 1;
         loginFailures.set(failKey, {
           fails: nextFails,
