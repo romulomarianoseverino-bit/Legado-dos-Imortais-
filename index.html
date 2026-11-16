@@ -9018,17 +9018,28 @@
                 return `<div class="flex flex-wrap items-center justify-between gap-2 bg-slate-900 border ${ativo ? 'border-emerald-400' : 'border-slate-800'} rounded-xl px-2.5 py-1.5">
                     <div class="min-w-0">
                         <strong class="text-slate-100 block truncate">${escapeHTML(b.nome)}</strong>
-                        <span class="text-[10px] text-slate-400">${b.tileCount} casas • ${escapeHTML(temaExib)}</span>
+                        <span class="text-[10px] text-slate-400">${Number(b.tileCount) || 0} casas • ${escapeHTML(temaExib)}</span>
                     </div>
                     <div class="flex items-center gap-1 shrink-0">
-                        <button type="button" onclick="equiparTabuleiroSalvo('${escapeHTML(b.id)}')" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-2 py-1 rounded text-[10px] cursor-pointer">${ativo ? 'Ativo' : 'Equipar'}</button>
-                        <button type="button" onclick="editarTabuleiroSalvo('${escapeHTML(b.id)}')" class="bg-slate-800 hover:bg-slate-700 text-amber-300 px-2 py-1 rounded text-[10px] cursor-pointer">Editar</button>
-                        <button type="button" onclick="renomearTabuleiroSalvo('${escapeHTML(b.id)}')" class="bg-slate-800 hover:bg-slate-700 text-purple-300 px-2 py-1 rounded text-[10px] cursor-pointer">Renomear</button>
-                        <button type="button" onclick="duplicarTabuleiroSalvo('${escapeHTML(b.id)}')" class="bg-slate-800 hover:bg-slate-700 text-cyan-300 px-2 py-1 rounded text-[10px] cursor-pointer">Duplicar</button>
-                        <button type="button" onclick="excluirTabuleiroSalvo('${escapeHTML(b.id)}')" class="bg-red-900/50 hover:bg-red-800 text-red-200 px-1.5 py-1 rounded text-[10px] cursor-pointer">🗑️</button>
+                        <button type="button" data-board-action="equip" data-board-id="${escapeHTML(b.id)}" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-2 py-1 rounded text-[10px] cursor-pointer">${ativo ? 'Ativo' : 'Equipar'}</button>
+                        <button type="button" data-board-action="edit" data-board-id="${escapeHTML(b.id)}" class="bg-slate-800 hover:bg-slate-700 text-amber-300 px-2 py-1 rounded text-[10px] cursor-pointer">Editar</button>
+                        <button type="button" data-board-action="rename" data-board-id="${escapeHTML(b.id)}" class="bg-slate-800 hover:bg-slate-700 text-purple-300 px-2 py-1 rounded text-[10px] cursor-pointer">Renomear</button>
+                        <button type="button" data-board-action="duplicate" data-board-id="${escapeHTML(b.id)}" class="bg-slate-800 hover:bg-slate-700 text-cyan-300 px-2 py-1 rounded text-[10px] cursor-pointer">Duplicar</button>
+                        <button type="button" data-board-action="delete" data-board-id="${escapeHTML(b.id)}" class="bg-red-900/50 hover:bg-red-800 text-red-200 px-1.5 py-1 rounded text-[10px] cursor-pointer">🗑️</button>
                     </div>
                 </div>`;
             }).join('');
+            listEl.querySelectorAll('[data-board-action]').forEach((button) => {
+                const id = button.getAttribute('data-board-id') || '';
+                const action = button.getAttribute('data-board-action');
+                button.addEventListener('click', () => {
+                    if (action === 'equip') equiparTabuleiroSalvo(id);
+                    else if (action === 'edit') editarTabuleiroSalvo(id);
+                    else if (action === 'rename') renomearTabuleiroSalvo(id);
+                    else if (action === 'duplicate') duplicarTabuleiroSalvo(id);
+                    else if (action === 'delete') excluirTabuleiroSalvo(id);
+                });
+            });
         }
 
         async function equiparTabuleiroSalvo(id) {
@@ -9269,11 +9280,18 @@
                 return `<div class="flex items-center justify-between gap-2 bg-slate-900 border ${ativo ? 'border-amber-400' : 'border-slate-800'} rounded-lg px-2 py-1 text-[11px]">
                     <span class="truncate text-slate-200">${escapeHTML(d.nome)}</span>
                     <div class="flex items-center gap-1 shrink-0">
-                        <button type="button" onclick="equiparDadoSalvo('${escapeHTML(d.id)}')" class="bg-amber-500 text-slate-950 font-bold px-2 py-0.5 rounded text-[10px] cursor-pointer">${ativo ? 'Ativo' : 'Equipar'}</button>
-                        <button type="button" onclick="excluirDadoSalvo('${escapeHTML(d.id)}')" class="bg-red-900/50 text-red-200 px-1.5 py-0.5 rounded text-[10px] cursor-pointer">🗑️</button>
+                        <button type="button" data-dice-action="equip" data-dice-id="${escapeHTML(d.id)}" class="bg-amber-500 text-slate-950 font-bold px-2 py-0.5 rounded text-[10px] cursor-pointer">${ativo ? 'Ativo' : 'Equipar'}</button>
+                        <button type="button" data-dice-action="delete" data-dice-id="${escapeHTML(d.id)}" class="bg-red-900/50 text-red-200 px-1.5 py-0.5 rounded text-[10px] cursor-pointer">🗑️</button>
                     </div>
                 </div>`;
             }).join('');
+            box.querySelectorAll('[data-dice-action]').forEach((button) => {
+                const id = button.getAttribute('data-dice-id') || '';
+                button.addEventListener('click', () => {
+                    if (button.getAttribute('data-dice-action') === 'equip') equiparDadoSalvo(id);
+                    else excluirDadoSalvo(id);
+                });
+            });
         }
 
         async function equiparDadoSalvo(id) {
