@@ -391,6 +391,15 @@ export function createPlayerEconomyRouter(opts: PlayerEconomyRouterOptions): exp
     };
   };
 
+  const hashSessionToken = (token: string): string =>
+    crypto.createHash('sha256').update(token).digest('hex');
+
+  const pruneExpiredSessions = (sessions: Record<string, PlayerSessionRecord>, now = Date.now()) => {
+    for (const [key, session] of Object.entries(sessions)) {
+      if (!session || now > session.expiresAt) delete sessions[key];
+    }
+  };
+
   const authenticatePlayer = (req: express.Request): { user: PlayerAccountRecord; accounts: Record<string, PlayerAccountRecord> } | null => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return null;
@@ -398,10 +407,20 @@ export function createPlayerEconomyRouter(opts: PlayerEconomyRouterOptions): exp
     if (!token || token.length < 32) return null;
 
     const sessions = loadSessions();
-    const session = sessions[token];
+    const tokenHash = hashSessionToken(token);
+    let session = sessions[tokenHash];
+
+    // Migra sessões antigas que ainda estavam indexadas pelo token em texto puro.
+    if (!session && sessions[token]) {
+      session = sessions[token];
+      delete sessions[token];
+      sessions[tokenHash] = { ...session, token: tokenHash };
+      saveSessions(sessions);
+    }
+
     if (!session) return null;
     if (Date.now() > session.expiresAt) {
-      delete sessions[token];
+      delete sessions[tokenHash];
       saveSessions(sessions);
       return null;
     }
@@ -467,9 +486,11 @@ export function createPlayerEconomyRouter(opts: PlayerEconomyRouterOptions): exp
       saveAccounts(accounts);
 
       const token = crypto.randomBytes(32).toString('hex');
+      const tokenHash = hashSessionToken(token);
       const sessions = loadSessions();
-      sessions[token] = {
-        token,
+      pruneExpiredSessions(sessions, now);
+      sessions[tokenHash] = {
+        token: tokenHash,
         userId,
         username: newUser.username,
         createdAt: now,
@@ -528,9 +549,11 @@ export function createPlayerEconomyRouter(opts: PlayerEconomyRouterOptions): exp
       saveAccounts(accounts);
 
       const token = crypto.randomBytes(32).toString('hex');
+      const tokenHash = hashSessionToken(token);
       const sessions = loadSessions();
-      sessions[token] = {
-        token,
+      pruneExpiredSessions(sessions, now);
+      sessions[tokenHash] = {
+        token: tokenHash,
         userId: found.userId,
         username: found.username,
         createdAt: now,
@@ -553,8 +576,10 @@ export function createPlayerEconomyRouter(opts: PlayerEconomyRouterOptions): exp
     if (auth.startsWith('Bearer ')) {
       const token = auth.slice(7).trim();
       const sessions = loadSessions();
-      if (sessions[token]) {
-        delete sessions[token];
+      const tokenHash = hashSessionToken(token);
+      if (sessions[tokenHash] || sessions[token]) {
+        delete sessions[tokenHash];
+        delete sessions[token]; // Compatibilidade com sessões antigas.
         saveSessions(sessions);
       }
     }
