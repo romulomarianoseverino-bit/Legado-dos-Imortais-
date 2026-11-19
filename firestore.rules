@@ -35,6 +35,13 @@ service cloud.firestore {
       return isVerified() && request.auth.uid == userId;
     }
 
+    function isAdmin() {
+      return isVerified() && (
+        request.auth.token.email == 'romulomarianoseverino@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
     // ---------------------------------------------------------
     // Entity Validation Blueprints (Never reference existing/diff)
     // ---------------------------------------------------------
@@ -232,6 +239,11 @@ service cloud.firestore {
       allow delete: if isValidId(boardId)
         && isVerified()
         && existing().authorId == request.auth.uid;
+    }
+
+    match /admins/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId) && isAdmin();
+      allow list, create, update, delete: if false;
     }
   }
 }

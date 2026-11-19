@@ -295,7 +295,7 @@
             <button id="btn-audio-settings" type="button" onclick="abrirModalAudio()" title="Configurações de Áudio (Música e Efeitos Sonoros)" class="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400 text-amber-300 text-[10px] sm:text-xs font-bold px-2.5 py-1.5 rounded-lg cursor-pointer transition-all flex items-center gap-1 shadow-md">
                 <span id="audio-btn-icon">🔊</span> <span class="hidden sm:inline">Áudio</span>
             </button>
-            <button type="button" onclick="abrirModalAdmin()" title="Painel Exclusivo do Administrador" class="bg-slate-900/90 hover:bg-slate-800 border border-amber-500/40 hover:border-amber-400 text-amber-300 text-[10px] sm:text-xs font-bold px-2.5 py-1.5 rounded-lg cursor-pointer transition-all flex items-center gap-1 shadow-md">
+            <button id="btn-admin-header" type="button" onclick="abrirModalAdmin()" title="Painel Exclusivo do Administrador" aria-hidden="true" style="display: none;" class="hidden bg-slate-900/90 hover:bg-slate-800 border border-amber-500/40 hover:border-amber-400 text-amber-300 text-[10px] sm:text-xs font-bold px-2.5 py-1.5 rounded-lg cursor-pointer transition-all items-center gap-1 shadow-md">
                 🛡️ <span class="hidden sm:inline">Admin</span>
             </button>
             <button type="button" onclick="reiniciarPartidaComConfirmacao()" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 text-[10px] sm:text-xs font-bold px-3 py-1.5 rounded-lg cursor-pointer transition-all hover:border-amber-400">
@@ -553,7 +553,7 @@
                     <button type="button" onclick="abrirModalEstatisticas()" title="Estatísticas do Conquistador" class="bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-amber-500/40 text-slate-300 hover:text-amber-300 text-xs font-bold px-3 py-1.5 rounded-xl cursor-pointer transition-all flex items-center gap-1.5 shadow-md">
                         <span>📊</span> <span class="hidden sm:inline">Estatísticas</span>
                     </button>
-                    <button type="button" onclick="abrirModalAdmin()" title="Painel Exclusivo de Segurança e Admin" class="bg-slate-900/90 hover:bg-slate-800 border border-red-500/30 hover:border-red-400 text-red-300 text-xs font-bold px-2.5 py-1.5 rounded-xl cursor-pointer transition-all flex items-center gap-1 shadow-md">
+                    <button id="btn-admin-lobby" type="button" onclick="abrirModalAdmin()" title="Painel Exclusivo de Segurança e Admin" aria-hidden="true" style="display: none;" class="hidden bg-slate-900/90 hover:bg-slate-800 border border-red-500/30 hover:border-red-400 text-red-300 text-xs font-bold px-2.5 py-1.5 rounded-xl cursor-pointer transition-all items-center gap-1 shadow-md">
                         <span>🛡️</span>
                     </button>
                     <!-- Alternador Seguro para o Visual Clássico Preservado -->
@@ -6516,8 +6516,102 @@
         // PAINEL EXCLUSIVO DO ADMINISTRADOR (ATUALIZAÇÕES & BACKUPS NO SERVIDOR)
         // =========================================================================
         let adminArquivosSelecionados = [];
+        let adminOwnerEligible = false;
+
+        function setAdminShieldVisibility(visible) {
+            const buttons = [
+                document.getElementById('btn-admin-header'),
+                document.getElementById('btn-admin-lobby')
+            ];
+            buttons.forEach(btn => {
+                if (!btn) return;
+                if (visible) {
+                    btn.classList.remove('hidden');
+                    btn.classList.add('flex');
+                    btn.style.display = '';
+                    btn.setAttribute('aria-hidden', 'false');
+                } else {
+                    btn.classList.add('hidden');
+                    btn.classList.remove('flex');
+                    btn.style.display = 'none';
+                    btn.setAttribute('aria-hidden', 'true');
+                }
+            });
+        }
+
+        async function obterFirebaseIdTokenAtual(forceRefresh = false) {
+            const mod = window.Legado3D;
+            const fb = mod?.Firebase || window.LegadoFirebase;
+            if (fb && typeof fb.getIdToken === 'function') {
+                try {
+                    const tok = await fb.getIdToken(forceRefresh);
+                    if (tok) return tok;
+                } catch {}
+            }
+            if (fb?.auth?.currentUser && typeof fb.auth.currentUser.getIdToken === 'function') {
+                try {
+                    return await fb.auth.currentUser.getIdToken(forceRefresh);
+                } catch {}
+            }
+            return null;
+        }
+
+        async function atualizarVisibilidadePainelAdmin(forceRefreshToken = false) {
+            const token = sessionStorage.getItem('imortais_admin_token');
+            const idToken = await obterFirebaseIdTokenAtual(forceRefreshToken);
+
+            if (!token && !idToken) {
+                adminOwnerEligible = false;
+                setAdminShieldVisibility(false);
+                fecharModalAdminLogin();
+                fecharModalAdminPanel();
+                return false;
+            }
+
+            try {
+                const headers = {};
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+                if (idToken) headers['X-Firebase-Id-Token'] = idToken;
+
+                const res = await fetch(resolveApiUrl('/api/admin/eligibility'), { headers });
+                if (!res.ok) {
+                    adminOwnerEligible = false;
+                    setAdminShieldVisibility(false);
+                    sessionStorage.removeItem('imortais_admin_token');
+                    fecharModalAdminLogin();
+                    fecharModalAdminPanel();
+                    return false;
+                }
+
+                const data = await res.json();
+                const isEligible = data?.isAdmin === true;
+                adminOwnerEligible = isEligible;
+                setAdminShieldVisibility(isEligible);
+
+                if (!isEligible) {
+                    sessionStorage.removeItem('imortais_admin_token');
+                    fecharModalAdminLogin();
+                    fecharModalAdminPanel();
+                }
+                return isEligible;
+            } catch {
+                adminOwnerEligible = false;
+                setAdminShieldVisibility(false);
+                fecharModalAdminLogin();
+                fecharModalAdminPanel();
+                return false;
+            }
+        }
+        window.atualizarVisibilidadePainelAdmin = atualizarVisibilidadePainelAdmin;
 
         async function abrirModalAdmin() {
+            const eligible = await atualizarVisibilidadePainelAdmin(false);
+            if (!eligible || !adminOwnerEligible) {
+                fecharModalAdminLogin();
+                fecharModalAdminPanel();
+                return;
+            }
+
             const token = sessionStorage.getItem('imortais_admin_token');
             if (token) {
                 try {
@@ -6526,20 +6620,45 @@
                     });
                     if (res.ok) {
                         const data = await res.json();
+                        if (data?.authenticated) {
+                            const emailSpan = document.getElementById('admin-active-email');
+                            if (emailSpan) emailSpan.textContent = data.adminEmail || data.email || 'Administrador Conectado';
+                            document.getElementById('admin-panel-modal')?.classList.remove('hidden');
+                            trocarAbaAdmin('upload');
+                            return;
+                        }
+                    }
+                    sessionStorage.removeItem('imortais_admin_token');
+                } catch {}
+            }
+
+            // Troca automática criptográfica para o proprietário autenticado via Firebase Google Auth
+            const idToken = await obterFirebaseIdTokenAtual(true);
+            if (idToken) {
+                try {
+                    const loginRes = await fetch(resolveApiUrl('/api/admin/firebase-login'), {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Firebase-Id-Token': idToken
+                        },
+                        body: JSON.stringify({ idToken })
+                    });
+                    const loginData = await loginRes.json();
+                    if (loginRes.ok && loginData?.success && loginData?.token) {
+                        sessionStorage.setItem('imortais_admin_token', loginData.token);
                         const emailSpan = document.getElementById('admin-active-email');
-                        if (emailSpan) emailSpan.textContent = data.adminEmail || data.email || 'Administrador Conectado';
+                        if (emailSpan) emailSpan.textContent = loginData.adminEmail || 'Proprietário Autorizado';
+                        fecharModalAdminLogin();
                         document.getElementById('admin-panel-modal')?.classList.remove('hidden');
                         trocarAbaAdmin('upload');
                         return;
                     }
-                } catch (e) {}
+                } catch {}
             }
-            const fb = document.getElementById('admin-login-feedback');
-            if (fb) {
-                fb.classList.add('hidden');
-                fb.textContent = '';
-            }
-            document.getElementById('admin-login-modal')?.classList.remove('hidden');
+
+            // Bloqueia abertura indevida caso o servidor rejeite a sessão
+            await atualizarVisibilidadePainelAdmin(false);
         }
 
         function fecharModalAdminLogin() {
@@ -6619,6 +6738,8 @@
             }
             sessionStorage.removeItem('imortais_admin_token');
             fecharModalAdminPanel();
+            fecharModalAdminLogin();
+            await atualizarVisibilidadePainelAdmin(false);
             alert('Sessão administrativa encerrada com segurança.');
         }
 
@@ -9474,6 +9595,7 @@
                 }
                 localStorage.setItem(PLAYER_TOKEN_STORAGE_KEY, data.token);
                 await carregarSessaoContaJogador();
+                atualizarVisibilidadePainelAdmin(false).catch(() => {});
             } catch {
                 if (fb) fb.textContent = '⚠️ Servidor indisponível.';
             }
@@ -9497,6 +9619,7 @@
                 }
                 localStorage.setItem(PLAYER_TOKEN_STORAGE_KEY, data.token);
                 await carregarSessaoContaJogador();
+                atualizarVisibilidadePainelAdmin(false).catch(() => {});
             } catch {
                 if (fb) fb.textContent = '⚠️ Servidor indisponível.';
             }
@@ -9510,6 +9633,7 @@
                 localStorage.removeItem(PLAYER_TOKEN_STORAGE_KEY);
             }
             await carregarSessaoContaJogador();
+            atualizarVisibilidadePainelAdmin(false).catch(() => {});
         }
         window.sairContaJogador = sairContaJogador;
 
@@ -9763,10 +9887,13 @@
             }
             restaurarTabuleiroEDadoSalvosNoInicio().catch(() => {});
             verificarAtualizacaoDisponivel().catch(() => {});
+            setAdminShieldVisibility(false);
+            atualizarVisibilidadePainelAdmin(false).catch(() => {});
             iniciarObservadorFirebase().catch(() => {});
         });
 
         let cloudBoardsUnsubscribe = null;
+        let lastObservedFirebaseUid = null;
         function atualizarUiAuthFirebase(user) {
             const outBox = document.getElementById('firebase-logged-out');
             const inBox = document.getElementById('firebase-logged-in');
@@ -9791,7 +9918,13 @@
             if (!fb || typeof fb.subscribeFirebaseAuth !== 'function') return;
 
             fb.subscribeFirebaseAuth(async (user) => {
+                const nextUid = user?.uid || null;
+                if (!nextUid || (lastObservedFirebaseUid && nextUid !== lastObservedFirebaseUid)) {
+                    sessionStorage.removeItem('imortais_admin_token');
+                }
+                lastObservedFirebaseUid = nextUid;
                 atualizarUiAuthFirebase(user);
+                await atualizarVisibilidadePainelAdmin(Boolean(user));
                 if (typeof cloudBoardsUnsubscribe === 'function') {
                     cloudBoardsUnsubscribe();
                     cloudBoardsUnsubscribe = null;
@@ -9833,6 +9966,7 @@
             try {
                 if (st) st.textContent = '⏳ Abrindo login seguro do Google...';
                 await fb.signInWithGoogle();
+                await atualizarVisibilidadePainelAdmin(true);
             } catch (err) {
                 if (st) st.textContent = `⚠️ Não foi possível entrar com Google: ${err?.message || 'janela cancelada'}`;
             }
@@ -9841,9 +9975,14 @@
 
         async function sairGoogleFirebase() {
             const fb = window.LegadoFirebase;
-            if (!fb) return;
-            await fb.signOut();
+            sessionStorage.removeItem('imortais_admin_token');
+            adminOwnerEligible = false;
+            setAdminShieldVisibility(false);
+            fecharModalAdminPanel();
+            fecharModalAdminLogin();
+            if (fb) await fb.signOut();
             atualizarUiAuthFirebase(null);
+            await atualizarVisibilidadePainelAdmin(false);
         }
         window.sairGoogleFirebase = sairGoogleFirebase;
 

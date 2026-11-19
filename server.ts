@@ -125,6 +125,133 @@ function getAdminEmail(): string {
   return e.replace(/^["']|["']$/g, '');
 }
 
+const FIREBASE_PROJECT_ID = 'gen-lang-client-0556145853';
+const FIREBASE_CERT_URL = 'https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com';
+const DEFAULT_AUTHORIZED_OWNER_EMAIL = 'romulomarianoseverino@gmail.com';
+const ADMIN_OWNER_BINDING_FILE = path.join(BACKUPS_DIR, 'admin-owner.json');
+
+function getAuthorizedOwnerEmail(): string {
+  return (getAdminEmail() || DEFAULT_AUTHORIZED_OWNER_EMAIL).trim().toLowerCase();
+}
+
+function getConfiguredOwnerUid(): string {
+  return (process.env.ADMIN_OWNER_UID || '').trim();
+}
+
+interface AdminOwnerBinding {
+  authorizedEmail: string;
+  boundUid: string | null;
+  boundAt: number | null;
+}
+
+function loadAdminOwnerBinding(): AdminOwnerBinding | null {
+  try {
+    if (!fs.existsSync(ADMIN_OWNER_BINDING_FILE)) return null;
+    const raw = JSON.parse(fs.readFileSync(ADMIN_OWNER_BINDING_FILE, 'utf-8') || '{}');
+    if (typeof raw?.authorizedEmail === 'string') {
+      return {
+        authorizedEmail: raw.authorizedEmail.trim().toLowerCase(),
+        boundUid: typeof raw.boundUid === 'string' && raw.boundUid.trim() ? raw.boundUid.trim() : null,
+        boundAt: typeof raw.boundAt === 'number' ? raw.boundAt : null
+      };
+    }
+  } catch {}
+  return null;
+}
+
+let cachedGoogleCerts: { certs: Record<string, string>; expiresAt: number } | null = null;
+
+async function fetchGoogleSecureTokenCerts(): Promise<Record<string, string>> {
+  const now = Date.now();
+  if (cachedGoogleCerts && now < cachedGoogleCerts.expiresAt && Object.keys(cachedGoogleCerts.certs).length > 0) {
+    return cachedGoogleCerts.certs;
+  }
+  const res = await fetch(FIREBASE_CERT_URL, { method: 'GET' });
+  if (!res.ok) {
+    throw new Error(`Falha ao obter certificados públicos do Firebase (HTTP ${res.status}).`);
+  }
+  const certs = (await res.json()) as Record<string, string>;
+  const cc = res.headers.get('cache-control') || '';
+  const maxAgeMatch = /max-age=(\d+)/i.exec(cc);
+  const ttlSec = maxAgeMatch ? Math.max(60, Math.min(86400, parseInt(maxAgeMatch[1], 10))) : 3600;
+  cachedGoogleCerts = { certs, expiresAt: now + ttlSec * 1000 };
+  return certs;
+}
+
+interface VerifiedFirebaseClaims {
+  sub: string;
+  email: string;
+  email_verified: boolean;
+  aud: string;
+  iss: string;
+  exp: number;
+  iat: number;
+  auth_time: number;
+}
+
+async function verifyFirebaseIdToken(idToken: string): Promise<VerifiedFirebaseClaims | null> {
+  if (!idToken || typeof idToken !== 'string' || idToken.length > 8192) return null;
+  const parts = idToken.trim().split('.');
+  if (parts.length !== 3) return null;
+  const [headerB64, payloadB64, sigB64] = parts;
+  if (!headerB64 || !payloadB64 || !sigB64) return null;
+
+  let header: { alg?: string; kid?: string };
+  let payload: Partial<VerifiedFirebaseClaims>;
+  try {
+    header = JSON.parse(Buffer.from(headerB64, 'base64url').toString('utf-8'));
+    payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf-8'));
+  } catch {
+    return null;
+  }
+
+  if (header.alg !== 'RS256' || typeof header.kid !== 'string' || !header.kid) {
+    return null;
+  }
+
+  let certs: Record<string, string>;
+  try {
+    certs = await fetchGoogleSecureTokenCerts();
+  } catch {
+    return null;
+  }
+  const certPem = certs[header.kid];
+  if (!certPem || typeof certPem !== 'string') {
+    return null;
+  }
+
+  try {
+    const verifier = crypto.createVerify('RSA-SHA256');
+    verifier.update(`${headerB64}.${payloadB64}`);
+    verifier.end();
+    const isValidSig = verifier.verify(certPem, Buffer.from(sigB64, 'base64url'));
+    if (!isValidSig) return null;
+  } catch {
+    return null;
+  }
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (
+    payload.aud !== FIREBASE_PROJECT_ID ||
+    payload.iss !== `https://securetoken.google.com/${FIREBASE_PROJECT_ID}` ||
+    typeof payload.sub !== 'string' ||
+    !/^[a-zA-Z0-9_-]{6,128}$/.test(payload.sub) ||
+    typeof payload.exp !== 'number' ||
+    payload.exp <= nowSec ||
+    typeof payload.iat !== 'number' ||
+    payload.iat > nowSec + 300 ||
+    typeof payload.auth_time !== 'number' ||
+    payload.auth_time > nowSec + 300 ||
+    payload.email_verified !== true ||
+    typeof payload.email !== 'string' ||
+    payload.email.trim().length < 5
+  ) {
+    return null;
+  }
+
+  return payload as VerifiedFirebaseClaims;
+}
+
 // -------------------------------------------------------------
 // 3. PRIVACY & DATA MASKING UTILITIES
 // -------------------------------------------------------------
@@ -841,6 +968,8 @@ app.use('/api/admin', adminRateLimitMiddleware);
 // -------------------------------------------------------------
 interface AdminSession {
   email: string;
+  uid?: string;
+  authMode: 'firebase_owner' | 'secret';
   createdAt: number;
   expiresAt: number;
   clientIp: string;
@@ -885,17 +1014,119 @@ setInterval(() => {
   }
 }, 10 * 60 * 1000);
 
-// Admin Authentication Middleware
-function requireAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
-  const adminSecret = getAdminSecret();
-  const adminEmail = getAdminEmail();
-  if (!adminSecret || !adminEmail) {
-    logSecurityEvent('ADMIN_SERVICE_DISABLED_ATTEMPT', { path: req.path }, req);
-    return res.status(503).json({
-      error: 'Serviço administrativo desativado: credenciais administrativas não configuradas no ambiente.'
-    });
+async function authorizeOwnerFromFirebaseToken(
+  idToken: string,
+  req?: express.Request
+): Promise<{ authorized: boolean; reason?: string; email?: string; uid?: string }> {
+  const claims = await verifyFirebaseIdToken(idToken);
+  if (!claims) {
+    return { authorized: false, reason: 'invalid_firebase_token' };
   }
 
+  const ownerEmail = getAuthorizedOwnerEmail();
+  const claimEmail = claims.email.trim().toLowerCase();
+  if (!timingSafeCompare(claimEmail, ownerEmail)) {
+    logSecurityEvent('ADMIN_NON_OWNER_FIREBASE_DENIED', { attemptedEmail: claimEmail, uid: claims.sub }, req);
+    return { authorized: false, reason: 'not_authorized_owner_account' };
+  }
+
+  const configuredUid = getConfiguredOwnerUid();
+  if (configuredUid && !timingSafeCompare(claims.sub, configuredUid)) {
+    logSecurityEvent('ADMIN_UID_MISMATCH_DENIED', { uid: claims.sub }, req);
+    return { authorized: false, reason: 'owner_uid_mismatch' };
+  }
+
+  const existingBinding = loadAdminOwnerBinding();
+  if (existingBinding && existingBinding.authorizedEmail === ownerEmail && existingBinding.boundUid) {
+    if (!timingSafeCompare(claims.sub, existingBinding.boundUid)) {
+      logSecurityEvent('ADMIN_BOUND_UID_MISMATCH_DENIED', { uid: claims.sub }, req);
+      return { authorized: false, reason: 'bound_owner_uid_mismatch' };
+    }
+  } else {
+    const nextBinding: AdminOwnerBinding = {
+      authorizedEmail: ownerEmail,
+      boundUid: configuredUid || claims.sub,
+      boundAt: Date.now()
+    };
+    atomicWriteFileSync(ADMIN_OWNER_BINDING_FILE, JSON.stringify(nextBinding, null, 2));
+    logSecurityEvent('ADMIN_OWNER_UID_BOUND', { ownerEmail, uid: nextBinding.boundUid }, req);
+  }
+
+  return { authorized: true, email: ownerEmail, uid: claims.sub };
+}
+
+function validateActiveAdminSession(req: express.Request, session: AdminSession, token: string): { ok: boolean; status?: number; error?: string } {
+  const currentFingerprint = createFingerprint(req);
+  if (session.fingerprint !== currentFingerprint) {
+    activeSessions.delete(token);
+    logSecurityEvent('SESSION_HIJACK_ATTEMPT_BLOCKED', { email: session.email }, req);
+    return {
+      ok: false,
+      status: 401,
+      error: 'Acesso negado: Inconsistência de integridade na sessão detectada. Faça login novamente.'
+    };
+  }
+
+  if (Date.now() > session.expiresAt) {
+    activeSessions.delete(token);
+    logSecurityEvent('EXPIRED_SESSION_TOKEN', { email: session.email }, req);
+    return {
+      ok: false,
+      status: 401,
+      error: 'Acesso negado: Sessão expirada por inatividade. Faça login novamente.'
+    };
+  }
+
+  const authorizedOwnerEmail = getAuthorizedOwnerEmail();
+  if (!timingSafeCompare(session.email.toLowerCase(), authorizedOwnerEmail)) {
+    activeSessions.delete(token);
+    logSecurityEvent('SESSION_NON_OWNER_REVOKED', { email: session.email }, req);
+    return {
+      ok: false,
+      status: 403,
+      error: 'Acesso negado: Conta sem permissão de proprietário.'
+    };
+  }
+
+  if (session.authMode === 'secret') {
+    const adminSecret = getAdminSecret();
+    const adminEmail = getAdminEmail();
+    if (!adminSecret || !adminEmail) {
+      activeSessions.delete(token);
+      return {
+        ok: false,
+        status: 503,
+        error: 'Serviço administrativo por chave mestra desativado neste ambiente.'
+      };
+    }
+    const currentSecretHash = crypto.createHash('sha256').update(adminSecret).digest('hex');
+    if (session.secretHash !== currentSecretHash) {
+      activeSessions.delete(token);
+      logSecurityEvent('SESSION_SECRET_MISMATCH_REVOKED', { email: session.email }, req);
+      return {
+        ok: false,
+        status: 401,
+        error: 'Acesso negado: As credenciais do sistema foram alteradas. Todas as sessões anteriores foram revogadas.'
+      };
+    }
+  } else if (session.authMode === 'firebase_owner') {
+    const configuredUid = getConfiguredOwnerUid();
+    if (configuredUid && (!session.uid || !timingSafeCompare(session.uid, configuredUid))) {
+      activeSessions.delete(token);
+      return { ok: false, status: 403, error: 'Acesso negado: UID de proprietário divergente.' };
+    }
+    const binding = loadAdminOwnerBinding();
+    if (binding?.boundUid && (!session.uid || !timingSafeCompare(session.uid, binding.boundUid))) {
+      activeSessions.delete(token);
+      return { ok: false, status: 403, error: 'Acesso negado: Identificador do proprietário divergente.' };
+    }
+  }
+
+  return { ok: true };
+}
+
+// Admin Authentication Middleware
+function requireAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     logSecurityEvent('UNAUTHORIZED_ADMIN_REQUEST', { path: req.path }, req);
@@ -916,30 +1147,9 @@ function requireAdmin(req: express.Request, res: express.Response, next: express
     return res.status(401).json({ error: 'Acesso negado: Sessão administrativa inválida ou expirada.' });
   }
 
-  // Session Hijacking / Replay Defense: Verify client fingerprint
-  const currentFingerprint = createFingerprint(req);
-  if (session.fingerprint !== currentFingerprint) {
-    activeSessions.delete(token);
-    logSecurityEvent('SESSION_HIJACK_ATTEMPT_BLOCKED', { email: session.email }, req);
-    return res.status(401).json({
-      error: 'Acesso negado: Inconsistência de integridade na sessão detectada. Faça login novamente.'
-    });
-  }
-
-  // Secret Invalidation Defense: Invalidate all sessions if master secret in .env was modified
-  const currentSecretHash = crypto.createHash('sha256').update(adminSecret).digest('hex');
-  if (session.secretHash !== currentSecretHash) {
-    activeSessions.delete(token);
-    logSecurityEvent('SESSION_SECRET_MISMATCH_REVOKED', { email: session.email }, req);
-    return res.status(401).json({
-      error: 'Acesso negado: As credenciais do sistema foram alteradas. Todas as sessões anteriores foram revogadas.'
-    });
-  }
-
-  if (Date.now() > session.expiresAt) {
-    activeSessions.delete(token);
-    logSecurityEvent('EXPIRED_SESSION_TOKEN', { email: session.email }, req);
-    return res.status(401).json({ error: 'Acesso negado: Sessão expirada por inatividade. Faça login novamente.' });
+  const check = validateActiveAdminSession(req, session, token);
+  if (!check.ok) {
+    return res.status(check.status || 401).json({ error: check.error || 'Acesso administrativo negado.' });
   }
 
   // Extend idle session expiry (up to 4 hours from last activity)
@@ -1003,8 +1213,9 @@ app.post('/api/admin/login', (req, res) => {
     return res.status(400).json({ error: 'Formato de e-mail de administrador inválido.' });
   }
 
-  // Timing-safe comparisons against environment configuration strictly
-  const isEmailMatch = timingSafeCompare(cleanEmail, adminEmail);
+  // Timing-safe comparisons against environment configuration AND authorized owner email
+  const authorizedOwnerEmail = getAuthorizedOwnerEmail();
+  const isEmailMatch = timingSafeCompare(cleanEmail, adminEmail) && timingSafeCompare(cleanEmail, authorizedOwnerEmail);
   const isSecretMatch = timingSafeCompare(cleanSecret, adminSecret);
 
   if (!isEmailMatch || !isSecretMatch) {
@@ -1038,6 +1249,7 @@ app.post('/api/admin/login', (req, res) => {
 
   activeSessions.set(token, {
     email: cleanEmail,
+    authMode: 'secret',
     createdAt: now,
     expiresAt,
     clientIp: ip,
@@ -1056,14 +1268,142 @@ app.post('/api/admin/login', (req, res) => {
   });
 });
 
-// 2. Status Admin
-app.get('/api/admin/status', (req, res) => {
-  const adminSecret = getAdminSecret();
-  const adminEmail = getAdminEmail();
-  if (!adminSecret || !adminEmail) {
-    return res.json({ authenticated: false, disabled: true });
+// 1.1 Verificar Elegibilidade de Administrador (somente prova criptográfica Firebase ID Token ou sessão ativa)
+app.get('/api/admin/eligibility', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  const bearerCandidate = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7).trim() : '';
+  const hasValidHexToken = /^[a-f0-9]{64}$/.test(bearerCandidate);
+  const headerIdToken = String(req.headers['x-firebase-id-token'] || '').trim();
+
+  // Se há token Firebase ativo na requisição, ele é autoritativo (impede herança se usuário trocar para conta não-proprietária)
+  if (headerIdToken) {
+    const ownerCheck = await authorizeOwnerFromFirebaseToken(headerIdToken, req);
+    if (!ownerCheck.authorized) {
+      if (hasValidHexToken && activeSessions.has(bearerCandidate)) {
+        activeSessions.delete(bearerCandidate);
+      }
+      return res.json({
+        isAdmin: false,
+        authenticated: false
+      });
+    }
+
+    if (hasValidHexToken) {
+      const session = activeSessions.get(bearerCandidate);
+      if (session) {
+        const check = validateActiveAdminSession(req, session, bearerCandidate);
+        if (check.ok) {
+          return res.json({
+            isAdmin: true,
+            authenticated: true,
+            mode: session.authMode,
+            adminEmail: session.email
+          });
+        }
+      }
+    }
+
+    return res.json({
+      isAdmin: true,
+      authenticated: false,
+      mode: 'firebase_owner',
+      adminEmail: ownerCheck.email
+    });
   }
 
+  if (hasValidHexToken) {
+    const session = activeSessions.get(bearerCandidate);
+    if (session) {
+      const check = validateActiveAdminSession(req, session, bearerCandidate);
+      if (check.ok) {
+        return res.json({
+          isAdmin: true,
+          authenticated: true,
+          mode: session.authMode,
+          adminEmail: session.email
+        });
+      }
+    }
+  }
+
+  return res.json({
+    isAdmin: false,
+    authenticated: false
+  });
+});
+
+// 1.2 Login Administrativo via Identidade Criptográfica do Proprietário (Firebase ID Token)
+app.post('/api/admin/firebase-login', async (req, res) => {
+  const ip = getClientIp(req);
+  const now = Date.now();
+  const attemptRecord = adminLoginAttempts.get(ip) || { attempts: 0, firstAttempt: now, lockedUntil: 0 };
+
+  if (now < attemptRecord.lockedUntil) {
+    const remainingMin = Math.ceil((attemptRecord.lockedUntil - now) / 60000);
+    return res.status(429).json({
+      error: `Acesso temporariamente bloqueado por excesso de tentativas. Tente novamente em ${remainingMin} minuto(s).`
+    });
+  }
+
+  const rawBodyToken = typeof req.body?.idToken === 'string' ? req.body.idToken.trim() : '';
+  const rawHeaderToken = String(req.headers['x-firebase-id-token'] || '').trim();
+  const authHeader = req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.substring(7).trim() : '';
+  const idToken = rawBodyToken || rawHeaderToken || (authHeader.includes('.') ? authHeader : '');
+
+  if (!idToken) {
+    return res.status(401).json({ error: 'Token criptográfico de autenticação obrigatório.' });
+  }
+
+  const ownerCheck = await authorizeOwnerFromFirebaseToken(idToken, req);
+  if (!ownerCheck.authorized || !ownerCheck.email || !ownerCheck.uid) {
+    attemptRecord.attempts += 1;
+    if (attemptRecord.attempts >= MAX_ATTEMPTS) {
+      attemptRecord.lockedUntil = now + LOCKOUT_MS;
+    }
+    adminLoginAttempts.set(ip, attemptRecord);
+    savePersistedLockouts();
+    const statusCode =
+      ownerCheck.reason === 'not_authorized_owner_account' ||
+      ownerCheck.reason === 'owner_uid_mismatch' ||
+      ownerCheck.reason === 'bound_owner_uid_mismatch'
+        ? 403
+        : 401;
+    return res.status(statusCode).json({
+      error: 'Acesso negado: o painel administrativo é exclusivo da conta autorizada do proprietário.'
+    });
+  }
+
+  adminLoginAttempts.delete(ip);
+  savePersistedLockouts();
+
+  enforceMaxSessions();
+  const token = generateSessionToken();
+  const expiresAt = now + 4 * 60 * 60 * 1000;
+
+  activeSessions.set(token, {
+    email: ownerCheck.email,
+    uid: ownerCheck.uid,
+    authMode: 'firebase_owner',
+    createdAt: now,
+    expiresAt,
+    clientIp: ip,
+    fingerprint: createFingerprint(req),
+    secretHash: 'firebase_owner'
+  });
+
+  logSecurityEvent('ADMIN_FIREBASE_LOGIN_SUCCESS', { adminEmail: ownerCheck.email, uid: ownerCheck.uid }, req);
+
+  return res.json({
+    success: true,
+    message: 'Autenticação do proprietário verificada com sucesso.',
+    token,
+    adminEmail: ownerCheck.email,
+    expiresAt
+  });
+});
+
+// 2. Status Admin
+app.get('/api/admin/status', (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.json({ authenticated: false });
@@ -1076,21 +1416,19 @@ app.get('/api/admin/status', (req, res) => {
 
   const session = activeSessions.get(token);
 
-  if (!session || Date.now() > session.expiresAt) {
-    if (session) activeSessions.delete(token);
+  if (!session) {
     return res.json({ authenticated: false });
   }
 
-  // Verify fingerprint & secretHash consistency
-  const currentSecretHash = crypto.createHash('sha256').update(adminSecret).digest('hex');
-  if (session.fingerprint !== createFingerprint(req) || session.secretHash !== currentSecretHash) {
-    activeSessions.delete(token);
+  const check = validateActiveAdminSession(req, session, token);
+  if (!check.ok) {
     return res.json({ authenticated: false });
   }
 
   return res.json({
     authenticated: true,
     adminEmail: session.email,
+    authMode: session.authMode,
     expiresAt: session.expiresAt,
     recoveryBlocked: isRecoveryBlocked()
   });
@@ -1152,6 +1490,28 @@ app.get('/api/admin/logs', requireAdmin, (req, res) => {
     return res.json({ success: true, logs });
   } catch (err: any) {
     return res.status(500).json({ error: 'Erro ao carregar logs de segurança: ' + err.message });
+  }
+});
+
+// 6. Players Overview (Admin Only - Non-sensitive fields only)
+app.get('/api/admin/players', requireAdmin, (_req, res) => {
+  try {
+    const accountsFile = path.join(BACKUPS_DIR, 'player-accounts.json');
+    if (!fs.existsSync(accountsFile)) {
+      return res.json({ success: true, players: [] });
+    }
+    const raw = JSON.parse(fs.readFileSync(accountsFile, 'utf-8') || '{}') as Record<string, any>;
+    const players = Object.values(raw).map((u: any) => ({
+      userId: String(u?.userId || ''),
+      username: String(u?.username || ''),
+      coins: Number(u?.coins || 0),
+      isPremium: Boolean(u?.isPremium),
+      createdAt: Number(u?.createdAt || 0),
+      updatedAt: Number(u?.updatedAt || 0)
+    }));
+    return res.json({ success: true, players });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Erro ao consultar jogadores: ' + err.message });
   }
 });
 
@@ -2427,7 +2787,7 @@ function playerEconomyCorsMiddleware(req: express.Request, res: express.Response
   if (origin && allowedOrigins.has(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Firebase-Id-Token');
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     res.setHeader('Vary', 'Origin');
   }

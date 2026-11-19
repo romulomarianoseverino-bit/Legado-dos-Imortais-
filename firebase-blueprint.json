@@ -210,6 +210,31 @@
         }
       },
       "required": ["id", "authorId", "authorName", "nome", "tema", "totalCasas", "isPublic", "casas", "createdAt", "updatedAt"]
+    },
+    "AdminRoleRecord": {
+      "title": "AdminRoleRecord",
+      "description": "Server-managed owner/administrator marker document; never writable from client SDKs.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Authorized owner Firebase UID."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["owner"],
+          "description": "Fixed owner role identifier."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when role record was created."
+        }
+      },
+      "required": ["uid", "role", "createdAt"]
     }
   },
   "firestore": {
@@ -228,6 +253,10 @@
     "/communityBoards/{boardId}": {
       "schema": { "$ref": "#/entities/CloudCustomBoard" },
       "description": "Community and personal cloud custom boards (8-24 tiles)."
+    },
+    "/admins/{userId}": {
+      "schema": { "$ref": "#/entities/AdminRoleRecord" },
+      "description": "Restricted server-managed owner marker document."
     }
   }
 }

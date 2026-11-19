@@ -164,6 +164,15 @@ export async function signOutFirebase(): Promise<void> {
   await signOut(auth);
 }
 
+export async function getCurrentUserIdToken(forceRefresh = false): Promise<string | null> {
+  if (!auth.currentUser) return null;
+  try {
+    return await auth.currentUser.getIdToken(forceRefresh);
+  } catch {
+    return null;
+  }
+}
+
 export async function ensurePlayerCloudProfile(
   user: User,
   opts?: { displayName?: string; godId?: string; linkedLegacyUsername?: string; shareRankingWithFriends?: boolean }
@@ -459,6 +468,7 @@ export const LegadoFirebase = {
   subscribeFirebaseAuth,
   signInWithGoogle: signInWithGoogleFirebase,
   signOut: signOutFirebase,
+  getIdToken: getCurrentUserIdToken,
   ensurePlayerCloudProfile,
   recordPlayerMatchOutcomeCloud,
   savePieceToCloud,
