@@ -2941,6 +2941,14 @@
                 .replace(/'/g, '&#39;');
         }
 
+        function obterImagemRasterDataUrlSegura(value) {
+            const dataUrl = String(value || '');
+            if (dataUrl.length > 512 * 1024) return null;
+            return /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(dataUrl)
+                ? dataUrl
+                : null;
+        }
+
         function processarMensagemRede(data, conn) {
             if (!data || typeof data !== 'object' || !data.tipo) return;
             const meuNick = localStorage.getItem("mitologico_nickname") || "Guerreiro";
@@ -3135,13 +3143,20 @@
         }
 
         function receberConviteSalaRede(remetente, codigoSala, nomeSala) {
-            const safeRem = escapeHTML(remetente);
-            const safeCod = escapeHTML(codigoSala);
-            const safeNom = escapeHTML(nomeSala);
-            const encRem = encodeURIComponent(remetente);
-            const encCod = encodeURIComponent(codigoSala);
-            const encNom = encodeURIComponent(nomeSala);
-            adicionarHistorico(`📩 <strong>${safeRem}</strong> convidou você para a sala <strong>${safeNom}</strong> (${safeCod}). <button type="button" onclick="conectarPeerESala(decodeURIComponent('${encRem}'), decodeURIComponent('${encCod}'), decodeURIComponent('${encNom}'))" class="bg-blue-600 text-white px-2 py-0.5 rounded text-[10px] font-bold ml-1 cursor-pointer">Entrar</button>`);
+            const safeRem = String(remetente || '').trim().substring(0, 24);
+            const safeCod = String(codigoSala || '').trim().substring(0, 32);
+            const safeNom = String(nomeSala || '').trim().substring(0, 32);
+            adicionarHistorico(`📩 <strong>${escapeHTML(safeRem)}</strong> convidou você para a sala <strong>${escapeHTML(safeNom)}</strong> (${escapeHTML(safeCod)}).`);
+
+            const history = document.getElementById('event-history');
+            const entry = history?.firstElementChild;
+            if (!entry) return;
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'bg-blue-600 text-white px-2 py-0.5 rounded text-[10px] font-bold ml-1 cursor-pointer';
+            button.textContent = 'Entrar';
+            button.addEventListener('click', () => conectarPeerESala(safeRem, safeCod, safeNom));
+            entry.append(' ', button);
         }
 
         function copiarCodigoSalaAntigo() {
@@ -3169,25 +3184,30 @@
             let html = "";
             solicitacoesPendentes.forEach(nome => {
                 const safeNome = escapeHTML(nome);
-                const encNome = encodeURIComponent(nome);
                 html += `
                     <div class="flex items-center justify-between bg-slate-900 border border-amber-500/40 p-2 rounded-lg">
                         <span class="text-amber-300 font-bold">📩 ${safeNome}</span>
-                        <button type="button" onclick="aceitarSolicitacaoAmizade(decodeURIComponent('${encNome}'))" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold px-2 py-1 rounded cursor-pointer">Aceitar</button>
+                        <button type="button" data-friend-action="accept" data-friend-name="${safeNome}" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold px-2 py-1 rounded cursor-pointer">Aceitar</button>
                     </div>
                 `;
             });
             listaAmigos.forEach(a => {
                 const safeNome = escapeHTML(a.nome);
-                const encNome = encodeURIComponent(a.nome);
                 html += `
                     <div class="flex items-center justify-between bg-slate-900 border border-slate-800 p-2 rounded-lg">
                         <span class="text-slate-200 font-bold">👤 ${safeNome}</span>
-                        <button type="button" onclick="convidarAmigoDireto(decodeURIComponent('${encNome}'))" class="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded cursor-pointer">Convidar</button>
+                        <button type="button" data-friend-action="invite" data-friend-name="${safeNome}" class="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded cursor-pointer">Convidar</button>
                     </div>
                 `;
             });
             container.innerHTML = html;
+            container.querySelectorAll('[data-friend-action]').forEach((button) => {
+                const nome = button.getAttribute('data-friend-name') || '';
+                button.addEventListener('click', () => {
+                    if (button.getAttribute('data-friend-action') === 'accept') aceitarSolicitacaoAmizade(nome);
+                    else convidarAmigoDireto(nome);
+                });
+            });
         }
 
         function aceitarSolicitacaoAmizade(nome) {
@@ -3469,13 +3489,20 @@
                     <div class="flex items-center justify-between bg-slate-950 border border-slate-800 p-2.5 rounded-xl font-sans">
                         <div>
                             <strong class="text-amber-300 font-bold text-xs block">${escapeHTML(s.nome)} (${escapeHTML(s.code)})</strong>
-                            <span class="text-[10px] text-slate-400">Host: ${escapeHTML(s.hostName)} • ${s.playerCount}/${s.maxPlayers} • ${escapeHTML(s.boardName)}</span>
+                            <span class="text-[10px] text-slate-400">Host: ${escapeHTML(s.hostName)} • ${Number(s.playerCount) || 0}/${Number(s.maxPlayers) || 0} • ${escapeHTML(s.boardName)}</span>
                         </div>
-                        <button type="button" onclick="entrarNaSalaFoto('${escapeHTML(s.code)}','${escapeHTML(s.hostName)}','')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg cursor-pointer active:scale-95 flex items-center gap-1 font-cinzel">
+                        <button type="button" data-room-code="${escapeHTML(s.code)}" data-room-host="${escapeHTML(s.hostName)}" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg cursor-pointer active:scale-95 flex items-center gap-1 font-cinzel">
                             🔗 Entrar
                         </button>
                     </div>
                 `).join('');
+                container.querySelectorAll('[data-room-code]').forEach((button) => {
+                    button.addEventListener('click', () => entrarNaSalaFoto(
+                        button.getAttribute('data-room-code') || '',
+                        button.getAttribute('data-room-host') || '',
+                        ''
+                    ));
+                });
             } catch {
                 container.innerHTML = `<p class="text-xs text-slate-500 text-center py-3 font-cinzel">Servidor de salas indisponível.</p>`;
             }
@@ -4013,8 +4040,9 @@
             jogadores.forEach((j, idx) => {
                 const ehVez = idx === turnoAtual && !j.falido;
                 const peca = j.peca3d || (typeof obterPeca3DAtivaDoSlot === 'function' ? obterPeca3DAtivaDoSlot(j.id) : null);
-                const badgeVisual = (peca && peca.thumbDataUrl)
-                    ? `<img src="${peca.thumbDataUrl}" alt="${escapeHTML(peca.nome || 'Peça 3D')}" class="w-6 h-6 rounded-md object-contain bg-slate-950 border border-cyan-500/40 shrink-0" />`
+                const safeThumb = obterImagemRasterDataUrlSegura(peca?.thumbDataUrl);
+                const badgeVisual = safeThumb
+                    ? `<img src="${safeThumb}" alt="${escapeHTML(peca.nome || 'Peça 3D')}" class="w-6 h-6 rounded-md object-contain bg-slate-950 border border-cyan-500/40 shrink-0" />`
                     : `<span class="text-base sm:text-lg">${j.deus.icon}</span>`;
                 const card = document.createElement("div");
                 card.className = `bg-slate-900 border-2 ${ehVez ? 'border-amber-400 shadow-lg shadow-amber-500/20 scale-[1.02]' : 'border-slate-800 opacity-90'} rounded-xl p-2 sm:p-2.5 transition-all relative overflow-hidden`;
@@ -4089,7 +4117,34 @@
             const hist = document.getElementById("event-history");
             if (!hist) return;
             const li = document.createElement("li");
-            li.innerHTML = `• ${msg}`;
+            li.appendChild(document.createTextNode('• '));
+
+            // Converte mensagens antigas para DOM seguro: só texto e formatação básica.
+            // Nenhum atributo, evento inline, botão, imagem ou script vindo da mensagem é copiado.
+            const parsed = new DOMParser().parseFromString(String(msg ?? ''), 'text/html');
+            const appendSafeNodes = (source, target) => {
+                source.childNodes.forEach((node) => {
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        target.appendChild(document.createTextNode(node.textContent || ''));
+                        return;
+                    }
+                    if (node.nodeType !== Node.ELEMENT_NODE) return;
+                    const tag = node.tagName.toLowerCase();
+                    if (tag === 'br') {
+                        target.appendChild(document.createElement('br'));
+                        return;
+                    }
+                    if (tag === 'strong' || tag === 'b' || tag === 'em') {
+                        const safeTag = tag === 'b' ? 'strong' : tag;
+                        const safeElement = document.createElement(safeTag);
+                        target.appendChild(safeElement);
+                        appendSafeNodes(node, safeElement);
+                        return;
+                    }
+                    appendSafeNodes(node, target);
+                });
+            };
+            appendSafeNodes(parsed.body, li);
             hist.insertBefore(li, hist.firstChild);
             if (hist.children.length > 80) {
                 hist.removeChild(hist.lastChild);
@@ -5981,8 +6036,13 @@
             const pecaVencedor = vencedor.peca3d || (typeof obterPeca3DAtivaDoSlot === 'function' ? obterPeca3DAtivaDoSlot(vencedor.id) : null);
             if (winnerName) winnerName.textContent = vencedor.nome;
             if (godIcon) {
-                if (pecaVencedor && pecaVencedor.thumbDataUrl) {
-                    godIcon.innerHTML = `<img src="${pecaVencedor.thumbDataUrl}" alt="${escapeHTML(pecaVencedor.nome || 'Peça 3D')}" class="w-16 h-16 mx-auto rounded-2xl object-contain bg-slate-900 border border-amber-400/60 p-1 shadow-lg" />`;
+                const safeThumb = obterImagemRasterDataUrlSegura(pecaVencedor?.thumbDataUrl);
+                if (safeThumb) {
+                    const image = document.createElement('img');
+                    image.src = safeThumb;
+                    image.alt = String(pecaVencedor?.nome || 'Peça 3D').substring(0, 48);
+                    image.className = 'w-16 h-16 mx-auto rounded-2xl object-contain bg-slate-900 border border-amber-400/60 p-1 shadow-lg';
+                    godIcon.replaceChildren(image);
                 } else {
                     godIcon.textContent = vencedor.deus?.icon || vencedor.deus?.icone || '⚡';
                 }
@@ -6853,8 +6913,8 @@
                         statusBox.className = 'text-xs p-2.5 rounded-xl border border-emerald-500/50 bg-emerald-950/40 text-emerald-300 space-y-1';
                         statusBox.innerHTML = `
                             <div class="font-bold">✅ Atualização aplicada com sucesso!</div>
-                            <div>Cópia de segurança criada em: <span class="font-mono text-amber-300">${data.backupFolder}</span></div>
-                            <div>Arquivos aplicados: <span class="font-mono">${data.appliedFiles?.join(', ')}</span></div>
+                            <div>Cópia de segurança criada em: <span class="font-mono text-amber-300">${escapeHTML(String(data.backupFolder || ''))}</span></div>
+                            <div>Arquivos aplicados: <span class="font-mono">${escapeHTML((Array.isArray(data.appliedFiles) ? data.appliedFiles : []).map(String).join(', '))}</span></div>
                             <div class="text-[10px] text-slate-400 mt-1">A página será recarregada em 3 segundos para sincronizar as novidades...</div>
                         `;
                     }
@@ -6907,11 +6967,14 @@
                                     Arquivos modificados: ${escapeHTML(String(item.filesCount || 0))} (${escapeHTML(item.files?.join(', ') || '')})
                                 </div>
                             </div>
-                            <button type="button" onclick="executarRollbackAdmin('${escapeHTML(item.id)}')" class="bg-amber-600/90 hover:bg-amber-500 text-slate-950 font-cinzel font-black text-xs px-3 py-1.5 rounded-lg cursor-pointer active:scale-95 transition-all self-start sm:self-center shadow">
+                            <button type="button" data-rollback-id="${escapeHTML(item.id)}" class="bg-amber-600/90 hover:bg-amber-500 text-slate-950 font-cinzel font-black text-xs px-3 py-1.5 rounded-lg cursor-pointer active:scale-95 transition-all self-start sm:self-center shadow">
                                 ⏪ Restaurar Versão
                             </button>
                         </div>
                     `).join('');
+                    container.querySelectorAll('[data-rollback-id]').forEach((button) => {
+                        button.addEventListener('click', () => executarRollbackAdmin(button.getAttribute('data-rollback-id') || ''));
+                    });
                 } else {
                     container.innerHTML = '<p class="text-red-400 text-center py-3">Não foi possível carregar o histórico de versões.</p>';
                 }
@@ -7226,8 +7289,13 @@
                             peca.thumbDataUrl = null;
                         }
                     }
-                    if (peca.thumbDataUrl) {
-                        pawn.innerHTML = `<img src="${peca.thumbDataUrl}" alt="${escapeHTML(peca.nome || 'Peça 3D')}" class="w-full h-full object-contain scale-125 pointer-events-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]" />`;
+                    const safeThumb = obterImagemRasterDataUrlSegura(peca.thumbDataUrl);
+                    if (safeThumb) {
+                        const image = document.createElement('img');
+                        image.src = safeThumb;
+                        image.alt = String(peca.nome || 'Peça 3D').substring(0, 48);
+                        image.className = 'w-full h-full object-contain scale-125 pointer-events-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]';
+                        pawn.replaceChildren(image);
                         pawn.title = `${j.nome} — Peça 3D: ${peca.nome}`;
                         continue;
                     }
@@ -7558,11 +7626,12 @@
                 listEl.innerHTML = items.map((item) => {
                     const equipada = pecas3DAtivasCache[oficinaSlotAtual]?.id === item.id;
                     const stBadge = item.estiloVisual === 'cartoon' ? 'Cartoon' : item.estiloVisual === 'anime' ? 'Anime' : '3D';
+                    const safeThumb = obterImagemRasterDataUrlSegura(item.thumbDataUrl);
                     return `
                         <div class="flex items-center justify-between gap-2 bg-slate-900 border ${equipada ? 'border-cyan-400' : 'border-slate-800'} rounded-xl p-2">
                             <div class="flex items-center gap-2 min-w-0">
                                 <div class="w-9 h-9 rounded-lg bg-slate-950 border border-slate-700 flex items-center justify-center overflow-hidden shrink-0">
-                                    ${item.thumbDataUrl ? `<img src="${item.thumbDataUrl}" alt="${escapeHTML(item.nome)}" class="w-full h-full object-contain" />` : '<span>🎭</span>'}
+                                    ${safeThumb ? `<img src="${safeThumb}" alt="${escapeHTML(item.nome)}" class="w-full h-full object-contain" />` : '<span>🎭</span>'}
                                 </div>
                                 <div class="min-w-0">
                                     <strong class="text-[11px] font-cinzel text-amber-200 block truncate">${escapeHTML(item.nome)}</strong>
@@ -7570,12 +7639,19 @@
                                 </div>
                             </div>
                             <div class="flex items-center gap-1 shrink-0">
-                                <button type="button" onclick="equiparPecaBiblioteca3D('${escapeHTML(item.id)}')" class="${equipada ? 'bg-cyan-500 text-slate-950' : 'bg-amber-500/20 hover:bg-amber-500/35 text-amber-300'} text-[10px] font-bold px-2 py-1 rounded-lg cursor-pointer">${equipada ? 'Ativa' : 'Equipar'}</button>
-                                <button type="button" onclick="excluirPecaBiblioteca3D('${escapeHTML(item.id)}')" title="Excluir da biblioteca" class="bg-red-900/40 hover:bg-red-700/60 text-red-300 text-[10px] px-1.5 py-1 rounded-lg cursor-pointer">🗑️</button>
+                                <button type="button" data-piece-action="equip" data-piece-id="${escapeHTML(item.id)}" class="${equipada ? 'bg-cyan-500 text-slate-950' : 'bg-amber-500/20 hover:bg-amber-500/35 text-amber-300'} text-[10px] font-bold px-2 py-1 rounded-lg cursor-pointer">${equipada ? 'Ativa' : 'Equipar'}</button>
+                                <button type="button" data-piece-action="delete" data-piece-id="${escapeHTML(item.id)}" title="Excluir da biblioteca" class="bg-red-900/40 hover:bg-red-700/60 text-red-300 text-[10px] px-1.5 py-1 rounded-lg cursor-pointer">🗑️</button>
                             </div>
                         </div>
                     `;
                 }).join('');
+                listEl.querySelectorAll('[data-piece-action]').forEach((button) => {
+                    const id = button.getAttribute('data-piece-id') || '';
+                    button.addEventListener('click', () => {
+                        if (button.getAttribute('data-piece-action') === 'equip') equiparPecaBiblioteca3D(id);
+                        else excluirPecaBiblioteca3D(id);
+                    });
+                });
             } catch {
                 listEl.innerHTML = '<p class="text-red-400 col-span-full py-2 text-center">IndexedDB indisponível neste navegador.</p>';
             }
@@ -8034,10 +8110,17 @@
                 }
                 listEl.innerHTML = list.map(o => `
                     <div class="inline-flex items-center gap-1 bg-slate-950 border border-purple-500/40 rounded-lg px-2 py-0.5">
-                        <button type="button" onclick="equiparVestimentaSalva3D('${escapeHTML(o.id)}')" class="text-purple-200 hover:text-amber-300 font-bold cursor-pointer">${escapeHTML(o.nome)}</button>
-                        <button type="button" onclick="removerVestimentaSalva3D('${escapeHTML(o.id)}')" title="Excluir vestimenta" class="text-red-400 hover:text-red-300 cursor-pointer ml-1">✕</button>
+                        <button type="button" data-outfit-action="equip" data-outfit-id="${escapeHTML(o.id)}" class="text-purple-200 hover:text-amber-300 font-bold cursor-pointer">${escapeHTML(o.nome)}</button>
+                        <button type="button" data-outfit-action="remove" data-outfit-id="${escapeHTML(o.id)}" title="Excluir vestimenta" class="text-red-400 hover:text-red-300 cursor-pointer ml-1">✕</button>
                     </div>
                 `).join('');
+                listEl.querySelectorAll('[data-outfit-action]').forEach((button) => {
+                    const id = button.getAttribute('data-outfit-id') || '';
+                    button.addEventListener('click', () => {
+                        if (button.getAttribute('data-outfit-action') === 'equip') equiparVestimentaSalva3D(id);
+                        else removerVestimentaSalva3D(id);
+                    });
+                });
             } catch {}
         }
 
@@ -9018,17 +9101,28 @@
                 return `<div class="flex flex-wrap items-center justify-between gap-2 bg-slate-900 border ${ativo ? 'border-emerald-400' : 'border-slate-800'} rounded-xl px-2.5 py-1.5">
                     <div class="min-w-0">
                         <strong class="text-slate-100 block truncate">${escapeHTML(b.nome)}</strong>
-                        <span class="text-[10px] text-slate-400">${b.tileCount} casas • ${escapeHTML(temaExib)}</span>
+                        <span class="text-[10px] text-slate-400">${Number(b.tileCount) || 0} casas • ${escapeHTML(temaExib)}</span>
                     </div>
                     <div class="flex items-center gap-1 shrink-0">
-                        <button type="button" onclick="equiparTabuleiroSalvo('${escapeHTML(b.id)}')" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-2 py-1 rounded text-[10px] cursor-pointer">${ativo ? 'Ativo' : 'Equipar'}</button>
-                        <button type="button" onclick="editarTabuleiroSalvo('${escapeHTML(b.id)}')" class="bg-slate-800 hover:bg-slate-700 text-amber-300 px-2 py-1 rounded text-[10px] cursor-pointer">Editar</button>
-                        <button type="button" onclick="renomearTabuleiroSalvo('${escapeHTML(b.id)}')" class="bg-slate-800 hover:bg-slate-700 text-purple-300 px-2 py-1 rounded text-[10px] cursor-pointer">Renomear</button>
-                        <button type="button" onclick="duplicarTabuleiroSalvo('${escapeHTML(b.id)}')" class="bg-slate-800 hover:bg-slate-700 text-cyan-300 px-2 py-1 rounded text-[10px] cursor-pointer">Duplicar</button>
-                        <button type="button" onclick="excluirTabuleiroSalvo('${escapeHTML(b.id)}')" class="bg-red-900/50 hover:bg-red-800 text-red-200 px-1.5 py-1 rounded text-[10px] cursor-pointer">🗑️</button>
+                        <button type="button" data-board-action="equip" data-board-id="${escapeHTML(b.id)}" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-2 py-1 rounded text-[10px] cursor-pointer">${ativo ? 'Ativo' : 'Equipar'}</button>
+                        <button type="button" data-board-action="edit" data-board-id="${escapeHTML(b.id)}" class="bg-slate-800 hover:bg-slate-700 text-amber-300 px-2 py-1 rounded text-[10px] cursor-pointer">Editar</button>
+                        <button type="button" data-board-action="rename" data-board-id="${escapeHTML(b.id)}" class="bg-slate-800 hover:bg-slate-700 text-purple-300 px-2 py-1 rounded text-[10px] cursor-pointer">Renomear</button>
+                        <button type="button" data-board-action="duplicate" data-board-id="${escapeHTML(b.id)}" class="bg-slate-800 hover:bg-slate-700 text-cyan-300 px-2 py-1 rounded text-[10px] cursor-pointer">Duplicar</button>
+                        <button type="button" data-board-action="delete" data-board-id="${escapeHTML(b.id)}" class="bg-red-900/50 hover:bg-red-800 text-red-200 px-1.5 py-1 rounded text-[10px] cursor-pointer">🗑️</button>
                     </div>
                 </div>`;
             }).join('');
+            listEl.querySelectorAll('[data-board-action]').forEach((button) => {
+                const id = button.getAttribute('data-board-id') || '';
+                const action = button.getAttribute('data-board-action');
+                button.addEventListener('click', () => {
+                    if (action === 'equip') equiparTabuleiroSalvo(id);
+                    else if (action === 'edit') editarTabuleiroSalvo(id);
+                    else if (action === 'rename') renomearTabuleiroSalvo(id);
+                    else if (action === 'duplicate') duplicarTabuleiroSalvo(id);
+                    else if (action === 'delete') excluirTabuleiroSalvo(id);
+                });
+            });
         }
 
         async function equiparTabuleiroSalvo(id) {
@@ -9287,11 +9381,18 @@
                 return `<div class="flex items-center justify-between gap-2 bg-slate-900 border ${ativo ? 'border-amber-400' : 'border-slate-800'} rounded-lg px-2 py-1 text-[11px]">
                     <span class="truncate text-slate-200">${escapeHTML(d.nome)}</span>
                     <div class="flex items-center gap-1 shrink-0">
-                        <button type="button" onclick="equiparDadoSalvo('${escapeHTML(d.id)}')" class="bg-amber-500 text-slate-950 font-bold px-2 py-0.5 rounded text-[10px] cursor-pointer">${ativo ? 'Ativo' : 'Equipar'}</button>
-                        <button type="button" onclick="excluirDadoSalvo('${escapeHTML(d.id)}')" class="bg-red-900/50 text-red-200 px-1.5 py-0.5 rounded text-[10px] cursor-pointer">🗑️</button>
+                        <button type="button" data-dice-action="equip" data-dice-id="${escapeHTML(d.id)}" class="bg-amber-500 text-slate-950 font-bold px-2 py-0.5 rounded text-[10px] cursor-pointer">${ativo ? 'Ativo' : 'Equipar'}</button>
+                        <button type="button" data-dice-action="delete" data-dice-id="${escapeHTML(d.id)}" class="bg-red-900/50 text-red-200 px-1.5 py-0.5 rounded text-[10px] cursor-pointer">🗑️</button>
                     </div>
                 </div>`;
             }).join('');
+            box.querySelectorAll('[data-dice-action]').forEach((button) => {
+                const id = button.getAttribute('data-dice-id') || '';
+                button.addEventListener('click', () => {
+                    if (button.getAttribute('data-dice-action') === 'equip') equiparDadoSalvo(id);
+                    else excluirDadoSalvo(id);
+                });
+            });
         }
 
         async function equiparDadoSalvo(id) {
@@ -9339,12 +9440,24 @@
                             <span class="text-[10px] px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-300">${escapeHTML(b.tema)}</span>
                         </div>
                         <div class="flex flex-wrap gap-1.5">
-                            <button type="button" onclick="importarTabuleiroDaGaleria('${jsonB64}')" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-2.5 py-1 rounded-lg text-[10px] cursor-pointer">⬇️ Importar &amp; Equipar</button>
-                            <button type="button" onclick="avaliarTabuleiroGaleria('${escapeHTML(item.id)}', 5)" class="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 px-2 py-1 rounded-lg text-[10px] cursor-pointer">⭐ 5</button>
-                            <button type="button" onclick="denunciarTabuleiroGaleria('${escapeHTML(item.id)}')" class="bg-red-950/60 hover:bg-red-900/70 border border-red-500/40 text-red-300 px-2 py-1 rounded-lg text-[10px] cursor-pointer">🚩 Denunciar</button>
+                            <button type="button" data-gallery-action="import" data-board-b64="${jsonB64}" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-2.5 py-1 rounded-lg text-[10px] cursor-pointer">⬇️ Importar &amp; Equipar</button>
+                            <button type="button" data-gallery-action="rate" data-gallery-id="${escapeHTML(item.id)}" class="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 px-2 py-1 rounded-lg text-[10px] cursor-pointer">⭐ 5</button>
+                            <button type="button" data-gallery-action="report" data-gallery-id="${escapeHTML(item.id)}" class="bg-red-950/60 hover:bg-red-900/70 border border-red-500/40 text-red-300 px-2 py-1 rounded-lg text-[10px] cursor-pointer">🚩 Denunciar</button>
                         </div>
                     </div>`;
                 }).join('');
+                grid.querySelectorAll('[data-gallery-action]').forEach((button) => {
+                    const action = button.getAttribute('data-gallery-action');
+                    if (action === 'import') {
+                        button.addEventListener('click', () => importarTabuleiroDaGaleria(button.getAttribute('data-board-b64') || ''));
+                        return;
+                    }
+                    const id = button.getAttribute('data-gallery-id') || '';
+                    button.addEventListener('click', () => {
+                        if (action === 'rate') avaliarTabuleiroGaleria(id, 5);
+                        else if (action === 'report') denunciarTabuleiroGaleria(id);
+                    });
+                });
             } catch {
                 grid.innerHTML = '<p class="text-red-400 text-xs col-span-full">Falha ao conectar à galeria do servidor.</p>';
             }
@@ -9589,11 +9702,14 @@
                             </div>
                             <p class="text-[11px] text-slate-400 mt-1">${escapeHTML(item.descricao)}</p>
                         </div>
-                        <button type="button" ${has ? 'disabled' : ''} onclick="comprarCosmeticoLoja('${escapeHTML(item.id)}')" class="${has ? 'bg-emerald-900/50 text-emerald-300 cursor-default' : 'bg-purple-600 hover:bg-purple-500 text-white cursor-pointer'} font-bold py-1.5 rounded-lg text-[11px]">
+                        <button type="button" data-cosmetic-id="${escapeHTML(item.id)}" ${has ? 'disabled' : ''} class="${has ? 'bg-emerald-900/50 text-emerald-300 cursor-default' : 'bg-purple-600 hover:bg-purple-500 text-white cursor-pointer'} font-bold py-1.5 rounded-lg text-[11px]">
                             ${has ? '✅ Desbloqueado' : `🛒 Desbloquear (${item.priceCoins} 🪙)`}
                         </button>
                     </div>`;
                 }).join('');
+                grid.querySelectorAll('[data-cosmetic-id]').forEach((button) => {
+                    button.addEventListener('click', () => comprarCosmeticoLoja(button.getAttribute('data-cosmetic-id') || ''));
+                });
             } catch {}
         }
 

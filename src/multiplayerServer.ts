@@ -2,7 +2,9 @@ import express from 'express';
 import http from 'http';
 import crypto from 'crypto';
 import { WebSocketServer, WebSocket } from 'ws';
+import { getNextRoomPlayerId } from './utils/playerIds';
 import {
+  CHARACTER_CLASSES,
   applyClassStartingBalance,
   applyClassPropertyBuyCost,
   applyClassUpgradeCost,
@@ -256,6 +258,12 @@ function pickGodObj(godIdRaw: unknown, indexFallback: number) {
   if (GODS_MAP[key]) return { ...GODS_MAP[key] };
   const keys: GodId[] = ['zeus', 'poseidon', 'hades', 'atena'];
   return { ...GODS_MAP[keys[indexFallback % keys.length]] };
+}
+
+function sanitizeClassId(raw: unknown): string {
+  return typeof raw === 'string' && CHARACTER_CLASSES.some((item) => item.id === raw)
+    ? raw
+    : 'classico_equilibrado';
 }
 
 function computeStartingBalance(godId: GodId, classeId: string, symmetric: boolean): number {
@@ -590,19 +598,21 @@ export function createMultiplayerServer(): MultiplayerContext {
       const limitPlayers = Math.max(2, Math.min(4, Number(maxPlayers) || 2));
       const symmetric = Boolean(competitiveSymmetric);
       const god = pickGodObj(godId, 0);
-      const cls = typeof classeId === 'string' && classeId ? classeId : 'classico_equilibrado';
+      const cls = sanitizeClassId(classeId);
       const nick = sanitizeNick(playerName, 'Anfitrião');
       const roomName = String(nome || `Sala de ${nick}`).replace(/[<>&"']/g, '').trim().substring(0, 32) || `Sala de ${nick}`;
 
       let code = '';
       for (let i = 0; i < 8; i++) {
-        const candidate = `OLIMPO-${crypto.randomInt(1000, 9999)}`;
+        const candidate = `OLIMPO-${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
         if (!rooms.has(candidate)) {
           code = candidate;
           break;
         }
       }
-      if (!code) code = `OLIMPO-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
+      if (!code) {
+        return res.status(503).json({ error: 'Não foi possível gerar um código exclusivo para a sala. Tente novamente.' });
+      }
 
       const { tiles, meta } = sanitizeCustomTiles(customBoard);
       const token = crypto.randomBytes(24).toString('hex');
@@ -673,7 +683,7 @@ export function createMultiplayerServer(): MultiplayerContext {
     }
 
     const { playerName, godId, classeId, peca3d } = req.body || {};
-    const newId = room.players.length + 1;
+    const newId = getNextRoomPlayerId(room.players);
     const god = pickGodObj(godId, newId - 1);
     const cls = typeof classeId === 'string' && classeId ? classeId : 'classico_equilibrado';
     const nick = sanitizeNick(playerName, `Guerreiro ${newId}`);
@@ -758,6 +768,10 @@ export function createMultiplayerServer(): MultiplayerContext {
       const token = String(msg.sessionToken || '').trim();
       const room = rooms.get(code);
 
+      if (socketMeta.has(ws)) {
+        ws.send(JSON.stringify({ type: 'ACTION_REJECTED', reason: 'Este canal WebSocket já está autenticado em uma sala.' }));
+        return;
+      }
       if (!room || room.playerTokens.get(pid) !== token) {
         ws.send(JSON.stringify({ type: 'ACTION_REJECTED', reason: 'Credenciais de sala WebSocket inválidas ou expiradas.' }));
         return;
@@ -1020,7 +1034,9 @@ export function createMultiplayerServer(): MultiplayerContext {
     const wss = new WebSocketServer({
       server: httpServer,
       path: '/ws',
-      maxPayload: 256 * 1024
+      // Tabuleiros personalizados podem conter várias miniaturas base64 validadas.
+      // Limite explícito de 4 MiB evita o padrão excessivo do ws sem bloquear esses tabuleiros.
+      maxPayload: 4 * 1024 * 1024
     });
 
     wss.on('connection', (ws) => {
