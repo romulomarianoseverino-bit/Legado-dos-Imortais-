@@ -102,13 +102,12 @@ async function testConnection(): Promise<boolean> {
     bootState.firestoreConnected = true;
     return true;
   } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error('Please check your Firebase configuration.');
-      bootState.firestoreConnected = false;
-      return false;
-    }
-    bootState.firestoreConnected = true;
-    return true;
+    // Qualquer falha na leitura do documento de diagnóstico significa que a
+    // conexão ainda não foi comprovada. Não tratar erros de permissão,
+    // configuração ou indisponibilidade como conexão bem-sucedida.
+    console.error('[Firebase] Falha ao validar conexão com o Firestore:', error);
+    bootState.firestoreConnected = false;
+    return false;
   }
 }
 

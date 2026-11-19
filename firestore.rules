@@ -151,10 +151,7 @@ service cloud.firestore {
         && incoming().uid == existing().uid
         && incoming().createdAt == existing().createdAt
         && incoming().updatedAt == request.time
-        && (
-          incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'godId', 'photoUrl', 'updatedAt'])
-          || incoming().diff(existing()).affectedKeys().hasOnly(['wins', 'losses', 'updatedAt'])
-        );
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'godId', 'photoUrl', 'updatedAt']);
 
       allow delete: if isValidId(userId) && isOwner(userId);
 

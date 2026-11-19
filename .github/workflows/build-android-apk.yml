@@ -1,21 +1,27 @@
-name: Build Android APK (Legado dos Imortais)
+name: Validar e publicar Release Android — Legado dos Imortais
 
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: legado-android-release-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build-android-apk:
-    name: Compilar APK Debug Instalavel
+  validate-and-build:
+    name: Testar e compilar Release
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
-      - name: Baixar codigo do repositorio
+      - name: Baixar código
         uses: actions/checkout@v4
 
       - name: Configurar Node.js 22
@@ -23,41 +29,96 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Configurar Bun (usar bun.lock)
+      - name: Configurar Bun
         uses: oven-sh/setup-bun@v2
 
-      - name: Configurar Java 21 (Temurin — necessário para Capacitor 8)
+      - name: Restaurar cache do Bun
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Configurar Java 21
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '21'
 
-      - name: Instalar dependencias com o lockfile existente
+      - name: Configurar cache e validar Gradle Wrapper
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Instalar dependências travadas
         run: bun install --frozen-lockfile
 
-      - name: Verificar tipos TypeScript
+      - name: Verificar TypeScript
         run: npm run lint
 
-      - name: Compilar aplicacao web (dist/)
+      - name: Executar testes automatizados
+        run: npm test
+
+      - name: Compilar aplicação web
         run: npm run build
 
-      - name: Preparar e sincronizar plataforma Android com Capacitor
+      - name: Sincronizar arquivos Android
         run: npx cap sync android
 
-      - name: Garantir permissao de execucao do Gradle
-        run: chmod +x android/gradlew
+      - name: Preparar assinatura Release (somente publicação)
+        if: github.event_name != 'pull_request'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASS: ${{ secrets.ANDROID_KEY_PASS }}
+        run: |
+          set -euo pipefail
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASS ANDROID_KEY_ALIAS ANDROID_KEY_PASS; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Configure o segredo do GitHub: ${name}. A publicação exige uma chave Release persistente."
+              exit 1
+            fi
+          done
+          KEYSTORE_PATH="$RUNNER_TEMP/legado-release.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          chmod 600 "$KEYSTORE_PATH"
+          echo "ANDROID_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
 
-      - name: Compilar APK de testes (assembleDebug)
+      - name: Compilar APK Release
         working-directory: android
-        run: ./gradlew --no-daemon assembleDebug
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon clean assembleRelease
 
-      - name: Verificar se o APK foi gerado
-        run: test -s android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Validar APK Release assinado
+        if: github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          APK="android/app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose "$APK"
+          sha256sum "$APK" | tee apk-sha256.txt
+          {
+            echo "## Release Android validada"
+            echo "- Commit: `$GITHUB_SHA`"
+            echo "- APK: `app-release.apk`"
+            echo "- SHA-256:"
+            echo '  ```'
+            cat apk-sha256.txt
+            echo '  ```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Publicar APK como artefato para download
+      - name: Validar saída Release em pull request (sem assinatura)
+        if: github.event_name == 'pull_request'
+        run: test -s android/app/build/outputs/apk/release/app-release-unsigned.apk
+
+      - name: Publicar APK Release
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: legado-dos-imortais-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: legado-dos-imortais-release-${{ github.run_number }}
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 30
