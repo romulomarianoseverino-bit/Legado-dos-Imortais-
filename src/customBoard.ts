@@ -15,12 +15,37 @@ export type BoardThemeId =
   | 'reinos_antigos'
   | 'civilizacoes'
   | 'aventura_retro'
+  | 'supernatural'
   | 'custom';
 
 export type BoardGridSize = 3 | 4 | 5 | 6 | 7; // 4x4=12, 5x5=16, 6x6=20, ou flexível 8..24
 export type BoardTileType = 'inicio' | 'propriedade' | 'bencao' | 'prisao';
 export type BoardSpacingId = 'compacto' | 'padrao' | 'amplo';
 export type BoardPropKind = 'pilares' | 'cristais' | 'arvores' | 'nebulosa' | 'torres';
+
+export type CustomOracleEffect =
+  | 'saldo_delta'
+  | 'imunidade'
+  | 'avancar_casas'
+  | 'ir_prisao'
+  | 'tributo';
+
+export interface CustomOracleCard {
+  id: string;
+  titulo: string;
+  descricao: string;
+  tipo: 'bencao' | 'maldicao';
+  efeito: CustomOracleEffect;
+  valor: number;
+  quantidade: number;
+  imagemDataUrl?: string;
+}
+
+export interface CustomBoardCardDeck {
+  positiveGroupName: string;
+  negativeGroupName: string;
+  cards: CustomOracleCard[];
+}
 
 export interface CustomBoardTile {
   id: number;
@@ -54,6 +79,8 @@ export interface CustomBoardConfig {
   decoracao3d: BoardPropKind;
   dicePresetId?: string;
   casas: CustomBoardTile[];
+  cardDeck?: CustomBoardCardDeck;
+  recommendedPieces?: string[];
   autor?: string;
   criadoEm: number;
   atualizadoEm: number;
@@ -193,6 +220,17 @@ export const BOARD_THEME_CATALOG: BoardThemePresetMeta[] = [
     corFundo: '#052e16',
     corDestaque: '#facc15',
     decoracao3d: 'arvores'
+  },
+  {
+    id: 'supernatural',
+    nome: 'Sobrenatural — Winchester',
+    icone: '🕯️',
+    descricao: 'Estradas sombrias, bunkers arcanos, encruzilhadas e batalhas entre Céu e Inferno.',
+    corPrimaria: '#991b1b',
+    corSecundaria: '#18181b',
+    corFundo: '#09090b',
+    corDestaque: '#f59e0b',
+    decoracao3d: 'torres'
   },
   {
     id: 'custom',
@@ -386,6 +424,24 @@ const THEME_TILE_POOLS: Record<BoardThemeId, Array<{ nome: string; icon: string;
     { nome: 'Farol dos Ventos', icon: '🧭' },
     { nome: 'Trilha das Nuvens', icon: '☁️' }
   ],
+  supernatural: [
+    { nome: 'Casa dos Homens de Letras', icon: '📜', grupo: 'Casas de Caça' },
+    { nome: 'Lawrence, Kansas', icon: '🏡', grupo: 'Origens' },
+    { nome: 'Roadhouse da Ellen', icon: '🥃', grupo: 'Abrigos' },
+    { nome: '1º Bunker Homens de Letras', icon: '🗝️', grupo: 'Bunkers' },
+    { nome: '2º Bunker Homens de Letras', icon: '🔐', grupo: 'Bunkers' },
+    { nome: 'Cemitério Stull', icon: '🪦', grupo: 'Confrontos' },
+    { nome: 'Inferno', icon: '🔥', grupo: 'Reinos' },
+    { nome: 'Paraíso', icon: '🕊️', grupo: 'Reinos' },
+    { nome: 'Purgatório', icon: '🌫️', grupo: 'Dimensões' },
+    { nome: 'Santuário de Bobby', icon: '📚', grupo: 'Abrigos' },
+    { nome: 'Encruzilhada dos Pactos', icon: '🕯️', grupo: 'Rituais' },
+    { nome: 'Hotel de Sioux Falls', icon: '🏚️', grupo: 'Estrada' },
+    { nome: 'Igreja de Carthage', icon: '⛪', grupo: 'Rituais' },
+    { nome: 'Torre do Anjo Caído', icon: '🪽', grupo: 'Dimensões' },
+    { nome: 'Armazém de Relíquias', icon: '🗡️', grupo: 'Casas de Caça' },
+    { nome: 'Lago Manitoc', icon: '🌊', grupo: 'Confrontos' }
+  ],
   custom: [
     { nome: 'Marco Pioneiro', icon: '🗺️', grupo: 'Horizonte' },
     { nome: 'Praça da Alvorada', icon: '🌅', grupo: 'Horizonte' },
@@ -403,6 +459,40 @@ const THEME_TILE_POOLS: Record<BoardThemeId, Array<{ nome: string; icon: string;
     { nome: 'Portão Místico', icon: '🔮' }
   ]
 };
+
+export const BOARD_CARD_DECK_PRESETS: Record<string, CustomBoardCardDeck> = {
+  mitologico: {
+    positiveGroupName: 'Bênçãos do Olimpo',
+    negativeGroupName: 'Provações de Ares',
+    cards: [
+      { id: 'mit_1', titulo: 'Bênção de Hermes', descricao: 'Os mensageiros divinos entregam um tesouro sagrado.', tipo: 'bencao', efeito: 'saldo_delta', valor: 400, quantidade: 2 },
+      { id: 'mit_2', titulo: 'Sabedoria de Atena', descricao: 'Escudo divino protege contra a próxima taxa de aluguel.', tipo: 'bencao', efeito: 'imunidade', valor: 1, quantidade: 1 },
+      { id: 'mit_3', titulo: 'Fúria de Ares', descricao: 'Conflito nas fronteiras exige tributo imediato aos templos.', tipo: 'maldicao', efeito: 'saldo_delta', valor: -250, quantidade: 2 },
+      { id: 'mit_4', titulo: 'Mar de Poseidon', descricao: 'Uma onda colossal impulsiona sua peça 2 casas adiante.', tipo: 'bencao', efeito: 'avancar_casas', valor: 2, quantidade: 1 }
+    ]
+  },
+  supernatural: {
+    positiveGroupName: 'Bênçãos de Chuck',
+    negativeGroupName: 'Maldições de Crowley',
+    cards: [
+      { id: 'sup_1', titulo: 'Bênção de Chuck: Proteção Arcana', descricao: 'Um sinal angelical reforça seus suprimentos de caça (+$450).', tipo: 'bencao', efeito: 'saldo_delta', valor: 450, quantidade: 2 },
+      { id: 'sup_2', titulo: 'Bênção de Chuck: Graça de Castiel', descricao: 'Imunidade divina contra a próxima cobrança de território.', tipo: 'bencao', efeito: 'imunidade', valor: 1, quantidade: 2 },
+      { id: 'sup_3', titulo: 'Bênção de Chuck: Atalho na Rota 66', descricao: 'Caminho livre na estrada! Avance 3 casas imediatamente.', tipo: 'bencao', efeito: 'avancar_casas', valor: 3, quantidade: 1 },
+      { id: 'sup_4', titulo: 'Maldição de Crowley: Pacto de Encruzilhada', descricao: 'O Rei do Inferno cobra os juros do contrato (-$350).', tipo: 'maldicao', efeito: 'saldo_delta', valor: -350, quantidade: 2 },
+      { id: 'sup_5', titulo: 'Maldição de Crowley: Selo da Armadilha', descricao: 'Você caiu em uma armadilha demoníaca e foi enviado para a Jaula!', tipo: 'maldicao', efeito: 'ir_prisao', valor: 1, quantidade: 1 },
+      { id: 'sup_6', titulo: 'Maldição de Crowley: Tributo Infernal', descricao: 'Demônios cobram pedágio sombrio pelos portais (-$220).', tipo: 'maldicao', efeito: 'tributo', valor: 220, quantidade: 1 }
+    ]
+  }
+};
+
+export function createDefaultCardDeckForTheme(tema: BoardThemeId): CustomBoardCardDeck {
+  const preset = BOARD_CARD_DECK_PRESETS[tema] || BOARD_CARD_DECK_PRESETS.mitologico;
+  return {
+    positiveGroupName: preset.positiveGroupName,
+    negativeGroupName: preset.negativeGroupName,
+    cards: preset.cards.map((c) => ({ ...c }))
+  };
+}
 
 export function computeFlexibleBoardGrid(tileCount: number): { cols: number; rows: number; gridSide: number } {
   const n = Math.max(8, Math.min(24, Math.round(tileCount || 12)));
@@ -473,10 +563,19 @@ export function createBoardFromThemePreset(
     if (i === 0) {
       casas.push({
         id: 0,
-        nome: tema === 'futurista' ? 'Portal Central' : tema === 'espacial' ? 'Doca Zero' : tema === 'custom' ? 'Marco Zero' : 'Portões do Olimpo',
+        nome:
+          tema === 'supernatural'
+            ? 'Garagem dos Winchester'
+            : tema === 'futurista'
+            ? 'Portal Central'
+            : tema === 'espacial'
+            ? 'Doca Zero'
+            : tema === 'custom'
+            ? 'Marco Zero'
+            : 'Portões do Olimpo',
         descricao: 'Casa inicial da jornada (+ $200 ao passar).',
         tipo: 'inicio',
-        icon: '🏛️',
+        icon: tema === 'supernatural' ? '🗝️' : '🏛️',
         valor: 0,
         aluguel: 0,
         temploCusto: 0,
@@ -486,10 +585,19 @@ export function createBoardFromThemePreset(
     } else if (i === prisonIdx) {
       casas.push({
         id: i,
-        nome: tema === 'futurista' ? 'Quarentena Cyber' : tema === 'espacial' ? 'Órbita Tártaro' : tema === 'custom' ? 'Prisão / Exílio' : 'Tártaro',
+        nome:
+          tema === 'supernatural'
+            ? 'Jaula de Lúcifer'
+            : tema === 'futurista'
+            ? 'Quarentena Cyber'
+            : tema === 'espacial'
+            ? 'Órbita Tártaro'
+            : tema === 'custom'
+            ? 'Prisão / Exílio'
+            : 'Tártaro',
         descricao: 'Penalidade temporária até pagar fiança ou tirar 6.',
         tipo: 'prisao',
-        icon: '🔥',
+        icon: tema === 'supernatural' ? '⛓️' : '🔥',
         valor: 0,
         aluguel: 0,
         temploCusto: 0,
@@ -499,10 +607,20 @@ export function createBoardFromThemePreset(
     } else if (i === blessA || (blessB > 0 && i === blessB && blessB !== prisonIdx)) {
       casas.push({
         id: i,
-        nome: tema === 'futurista' ? 'Terminal Oráculo' : tema === 'espacial' ? 'Baliza Cósmica' : 'Oráculo Sagrado',
-        descricao: 'Evento especial de sorte ou desafio.',
+        nome:
+          tema === 'supernatural'
+            ? 'Oráculo de Chuck & Crowley'
+            : tema === 'futurista'
+            ? 'Terminal Oráculo'
+            : tema === 'espacial'
+            ? 'Baliza Cósmica'
+            : 'Oráculo Sagrado',
+        descricao:
+          tema === 'supernatural'
+            ? 'Sorteie entre Bênçãos de Chuck e Maldições de Crowley.'
+            : 'Evento especial de sorte ou desafio.',
         tipo: 'bencao',
-        icon: '🔮',
+        icon: tema === 'supernatural' ? '🕯️' : '🔮',
         valor: 0,
         aluguel: 0,
         temploCusto: 0,
@@ -544,8 +662,97 @@ export function createBoardFromThemePreset(
     corDestaque: meta.corDestaque,
     decoracao3d: meta.decoracao3d,
     casas,
+    cardDeck: createDefaultCardDeckForTheme(tema),
+    ...(tema === 'supernatural'
+      ? {
+          recommendedPieces: [
+            'impala_1967',
+            'dean_winchester',
+            'sam_winchester',
+            'castiel',
+            'jack_kline',
+            'lucifer',
+            'crowley'
+          ]
+        }
+      : {}),
     criadoEm: now,
     atualizadoEm: now
+  };
+}
+
+export function resizeCustomBoardTiles(
+  board: CustomBoardConfig,
+  nextGridOrCount: number
+): CustomBoardConfig {
+  if (!board || !Array.isArray(board.casas)) {
+    return createBoardFromThemePreset('mitologico', nextGridOrCount);
+  }
+  const targetCount =
+    nextGridOrCount >= 8 && nextGridOrCount <= 24
+      ? Math.round(nextGridOrCount)
+      : tileCountForGridSide(nextGridOrCount);
+  const clampedTarget = Math.max(8, Math.min(24, targetCount));
+  const pool = THEME_TILE_POOLS[board.tema] || THEME_TILE_POOLS.mitologico;
+  const usedNames = new Set(board.casas.map((c) => String(c.nome || '').trim().toLowerCase()));
+
+  let nextCasas = board.casas.slice(0, clampedTarget).map((c, idx) => ({ ...c, id: idx }));
+
+  if (nextCasas.length < clampedTarget) {
+    let poolCursor = 0;
+    while (nextCasas.length < clampedTarget) {
+      const idx = nextCasas.length;
+      let chosen = pool[poolCursor % pool.length];
+      let tries = 0;
+      while (usedNames.has(chosen.nome.toLowerCase()) && tries < pool.length) {
+        poolCursor++;
+        tries++;
+        chosen = pool[poolCursor % pool.length];
+      }
+      const uniqueName = usedNames.has(chosen.nome.toLowerCase())
+        ? `${chosen.nome.substring(0, 18)} ${idx}`
+        : chosen.nome;
+      usedNames.add(uniqueName.toLowerCase());
+      const baseVal = 600 + ((idx % 10) * 200);
+      const econ = buildEconomicLevels(baseVal);
+      nextCasas.push({
+        id: idx,
+        nome: uniqueName,
+        descricao: '',
+        tipo: 'propriedade',
+        icon: chosen.icon,
+        grupo: chosen.grupo || DEFAULT_GROUPS[Math.floor(idx / 2) % DEFAULT_GROUPS.length],
+        valor: baseVal,
+        ...econ
+      });
+      poolCursor++;
+    }
+  }
+
+  // Ensure prison tile still exists if truncation removed it
+  if (!nextCasas.some((c) => c.tipo === 'prisao')) {
+    const prisonIdx = Math.min(nextCasas.length - 1, Math.max(1, Math.floor(nextCasas.length / 2)));
+    nextCasas[prisonIdx] = {
+      ...nextCasas[prisonIdx],
+      id: prisonIdx,
+      nome: board.tema === 'supernatural' ? 'Jaula de Lúcifer' : 'Tártaro',
+      tipo: 'prisao',
+      icon: board.tema === 'supernatural' ? '⛓️' : '🔥',
+      valor: 0,
+      aluguel: 0,
+      temploCusto: 0,
+      temploAluguel: 0,
+      santuarioCusto: 0
+    };
+  }
+
+  const { gridSide } = computeFlexibleBoardGrid(nextCasas.length);
+  return {
+    ...board,
+    gridSide,
+    tileCount: nextCasas.length,
+    casas: nextCasas,
+    atualizadoEm: Date.now()
   };
 }
 
@@ -725,6 +932,7 @@ export function validateCustomBoardConfig(board: unknown): {
     'reinos_antigos',
     'civilizacoes',
     'aventura_retro',
+    'supernatural',
     'custom'
   ];
   const tema: BoardThemeId = validThemes.includes(b.tema as BoardThemeId) ? (b.tema as BoardThemeId) : 'mitologico';
@@ -740,6 +948,55 @@ export function validateCustomBoardConfig(board: unknown): {
     : 'pilares';
   const espacamento: BoardSpacingId =
     b.espacamento === 'compacto' || b.espacamento === 'amplo' ? b.espacamento : 'padrao';
+
+  let normalizedDeck: CustomBoardCardDeck | undefined;
+  if (b.cardDeck && typeof b.cardDeck === 'object' && Array.isArray(b.cardDeck.cards)) {
+    const validEffects: CustomOracleEffect[] = [
+      'saldo_delta',
+      'imunidade',
+      'avancar_casas',
+      'ir_prisao',
+      'tributo'
+    ];
+    const cleanCards: CustomOracleCard[] = b.cardDeck.cards
+      .slice(0, 24)
+      .map((c, idx) => {
+        const efeito: CustomOracleEffect = validEffects.includes(c?.efeito) ? c.efeito : 'saldo_delta';
+        const tipo: 'bencao' | 'maldicao' = c?.tipo === 'maldicao' ? 'maldicao' : 'bencao';
+        const rawImg = typeof c?.imagemDataUrl === 'string' ? c.imagemDataUrl.trim() : '';
+        const safeImg =
+          rawImg && /^data:image\/(jpeg|jpg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(rawImg) && rawImg.length <= 48 * 1024
+            ? rawImg
+            : undefined;
+        return {
+          id: String(c?.id || `card_${idx}`).replace(/[^a-zA-Z0-9_-]/g, '').substring(0, 36) || `card_${idx}`,
+          titulo: String(c?.titulo || `Carta ${idx + 1}`).replace(/[<>"'`]/g, '').trim().substring(0, 44) || `Carta ${idx + 1}`,
+          descricao: String(c?.descricao || 'Evento especial do tabuleiro.').replace(/[<>"'`]/g, '').trim().substring(0, 140) || 'Evento especial.',
+          tipo,
+          efeito,
+          valor: Math.max(-2500, Math.min(2500, Math.round(Number(c?.valor) || 0))),
+          quantidade: Math.max(1, Math.min(6, Math.round(Number(c?.quantidade) || 1))),
+          ...(safeImg ? { imagemDataUrl: safeImg } : {})
+        };
+      })
+      .filter((c) => c.titulo.length >= 2);
+    if (cleanCards.length > 0) {
+      normalizedDeck = {
+        positiveGroupName:
+          String(b.cardDeck.positiveGroupName || 'Bênçãos').replace(/[<>"'`]/g, '').trim().substring(0, 36) || 'Bênçãos',
+        negativeGroupName:
+          String(b.cardDeck.negativeGroupName || 'Maldições').replace(/[<>"'`]/g, '').trim().substring(0, 36) || 'Maldições',
+        cards: cleanCards
+      };
+    }
+  }
+
+  const recommendedPieces = Array.isArray(b.recommendedPieces)
+    ? b.recommendedPieces
+        .map((x) => String(x || '').replace(/[^a-zA-Z0-9_-]/g, '').substring(0, 32))
+        .filter(Boolean)
+        .slice(0, 12)
+    : undefined;
 
   const now = Date.now();
   return {
@@ -760,6 +1017,8 @@ export function validateCustomBoardConfig(board: unknown): {
       decoracao3d,
       dicePresetId: typeof b.dicePresetId === 'string' ? b.dicePresetId.substring(0, 48) : undefined,
       casas: normalizedTiles,
+      ...(normalizedDeck ? { cardDeck: normalizedDeck } : {}),
+      ...(recommendedPieces && recommendedPieces.length > 0 ? { recommendedPieces } : {}),
       autor: typeof b.autor === 'string' ? b.autor.replace(/[<>"'`]/g, '').trim().substring(0, 24) : undefined,
       criadoEm: Number(b.criadoEm) || now,
       atualizadoEm: now
@@ -1049,6 +1308,66 @@ export function mountBoardCreatorPreview(
       }
     }
 
+    const maxAnisotropy = Math.min(4, renderer.capabilities?.getMaxAnisotropy?.() || 1);
+    const drawTileTopTexture = (
+      tile: CustomBoardTile,
+      baseColor: string,
+      highlightColor: string,
+      imgEl?: HTMLImageElement | null
+    ): THREE.CanvasTexture | null => {
+      if (typeof document === 'undefined') return null;
+      const canvas = document.createElement('canvas');
+      canvas.width = 160;
+      canvas.height = 160;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+
+      ctx.fillStyle = baseColor || '#1e293b';
+      ctx.fillRect(0, 0, 160, 160);
+
+      if (imgEl && imgEl.complete && imgEl.naturalWidth > 0) {
+        const minSide = Math.min(imgEl.naturalWidth, imgEl.naturalHeight);
+        const sx = (imgEl.naturalWidth - minSide) / 2;
+        const sy = (imgEl.naturalHeight - minSide) / 2;
+        ctx.drawImage(imgEl, sx, sy, minSide, minSide, 6, 6, 148, 148);
+        ctx.fillStyle = 'rgba(2, 6, 23, 0.52)';
+        ctx.fillRect(6, 6, 148, 148);
+      }
+
+      ctx.strokeStyle = highlightColor || '#fbbf24';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(4, 4, 152, 152);
+
+      // Dark high-contrast title bar
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.88)';
+      ctx.fillRect(8, 92, 144, 58);
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 17px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const label = (tile.nome || '').slice(0, 15);
+      ctx.fillText(label, 80, 114, 134);
+
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = 'bold 15px monospace';
+      const subLabel =
+        tile.tipo === 'propriedade'
+          ? `$${tile.valor || 0}`
+          : tile.tipo === 'inicio'
+          ? 'INÍCIO'
+          : tile.tipo === 'prisao'
+          ? 'PRISÃO'
+          : 'ORÁCULO';
+      ctx.fillText(subLabel, 80, 138, 134);
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = maxAnisotropy;
+      tex.needsUpdate = true;
+      return tex;
+    };
+
     positions.forEach((pos, idx) => {
       const tile = cfg.casas[idx];
       if (!tile) return;
@@ -1060,18 +1379,41 @@ export function mountBoardCreatorPreview(
           : tile.tipo === 'bencao'
           ? '#0891b2'
           : cfg.corPrimaria;
+      const sideMat = new THREE.MeshStandardMaterial({
+        color: tileHex,
+        roughness: 0.45,
+        metalness: 0.32
+      });
+      const topTex = drawTileTopTexture(tile, tileHex, cfg.corDestaque || '#fbbf24', null);
+      const topMat = new THREE.MeshStandardMaterial({
+        color: topTex ? 0xffffff : tileHex,
+        map: topTex || null,
+        roughness: 0.48,
+        metalness: 0.16
+      });
       const tMesh = new THREE.Mesh(
         new THREE.BoxGeometry(cellSize, 0.12, cellSize),
-        new THREE.MeshStandardMaterial({
-          color: tileHex,
-          roughness: 0.45,
-          metalness: 0.32
-        })
+        [sideMat, sideMat.clone(), topMat, sideMat.clone(), sideMat.clone(), sideMat.clone()]
       );
       tMesh.position.set(pos.x, 0.06, pos.z);
       tMesh.castShadow = true;
       tMesh.receiveShadow = true;
       boardGroup.add(tMesh);
+
+      if (tile.imagemDataUrl && typeof Image !== 'undefined') {
+        const img = new Image();
+        img.onload = () => {
+          if (disposed || tMesh.parent !== boardGroup) return;
+          const imgTex = drawTileTopTexture(tile, tileHex, cfg.corDestaque || '#fbbf24', img);
+          if (imgTex) {
+            if (topMat.map) topMat.map.dispose();
+            topMat.map = imgTex;
+            topMat.needsUpdate = true;
+            renderer.render(scene, camera);
+          }
+        };
+        img.src = tile.imagemDataUrl;
+      }
     });
 
     // Center Sanctuary Emblem + 4 corner decorative 3D props grounded at y=0

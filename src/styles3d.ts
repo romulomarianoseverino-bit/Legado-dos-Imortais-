@@ -728,6 +728,15 @@ export function getPresetDefaultRegionColors(
         detalhes: '#f97316',
         acessorios: '#facc15'
       };
+    case 'impala_1967':
+      return {
+        armadura: primaryHex === '#d97706' ? '#09090b' : primaryHex,
+        peitoral: '#18181b',
+        barriga: '#27272a',
+        detalhes: '#cbd5e1',
+        acessorios: '#fef08a',
+        calcado: '#1f2937'
+      };
     case 'spartan':
     default:
       return {

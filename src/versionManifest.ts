@@ -41,18 +41,19 @@ export interface UpdateEvaluationResult {
 export const PLANNED_MANIFEST_SAMPLE: AppVersionManifest = {
   schemaVersion: 1,
   appId: 'com.legadodosimortais.app',
-  publishedAtIso: '2026-11-14T00:00:00Z',
+  publishedAtIso: '2026-11-19T00:00:00Z',
   web: {
-    latestVersion: '2.1.0',
+    latestVersion: '2.2.0',
     minSupportedVersion: '1.0.0',
-    releaseNotes: 'Oficina de Tabuleiros e Dados 3D, Classes Balanceadas, Economia no Servidor e Recompensas Semanais.'
+    releaseNotes:
+      'Tema Sobrenatural & Baralhos Próprios por Tabuleiro, Impala 1967 3D e Personagens Temáticos, Duas Moedas & Recompensas de Partida, Rankings de Riqueza/Criadores, Convites Online no Servidor e Chave de Recuperação.'
   },
   android: {
-    latestVersionCode: 1,
-    latestVersionName: '1.0',
+    latestVersionCode: 2,
+    latestVersionName: '2.2.0',
     minSupportedVersionCode: 1,
     channel: 'official-https-apk-planned',
-    releaseNotes: 'Versão base Android Capacitor (build via GitHub Actions).'
+    releaseNotes: 'Versão Android Capacitor 2.2.0 sincronizada com os novos recursos (build via GitHub Actions).'
   }
 };
 

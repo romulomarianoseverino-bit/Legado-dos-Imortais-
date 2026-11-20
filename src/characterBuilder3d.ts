@@ -147,6 +147,7 @@ export interface ArticulatedRig {
   leftWing?: THREE.Object3D;
   rightWing?: THREE.Object3D;
   cape?: THREE.Object3D;
+  wheelPivots?: THREE.Object3D[];
   baseY: number;
 }
 
@@ -1212,6 +1213,15 @@ export function updateCharacterRigAnimation(
     if (rig.cape) rig.cape.rotation.x = 0.25 + bounce * 0.18;
     if (rig.leftWing) rig.leftWing.rotation.y = 0.2 + Math.sin(elapsedSec * 10) * 0.18;
     if (rig.rightWing) rig.rightWing.rotation.y = -0.2 - Math.sin(elapsedSec * 10) * 0.18;
+    if (rig.wheelPivots && rig.wheelPivots.length > 0) {
+      for (const w of rig.wheelPivots) {
+        w.rotation.x = elapsedSec * 12 * strideScale;
+      }
+      if (rig.pelvis) {
+        rig.pelvis.position.y = baseY + Math.abs(Math.sin(elapsedSec * 18)) * 0.018;
+        rig.pelvis.rotation.z = Math.sin(elapsedSec * 7) * 0.015;
+      }
+    }
     root.position.y = 0;
     return;
   }
@@ -1332,6 +1342,11 @@ export function updateCharacterRigAnimation(
   if (rig.cape) rig.cape.rotation.x = 0.08 + breath * 0.04;
   if (rig.leftWing) rig.leftWing.rotation.y = 0.12 + breath * 0.1;
   if (rig.rightWing) rig.rightWing.rotation.y = -0.12 - breath * 0.1;
+  if (rig.wheelPivots && rig.wheelPivots.length > 0) {
+    for (const w of rig.wheelPivots) {
+      w.rotation.x = 0;
+    }
+  }
 }
 
 export interface PhotoPaletteSuggestion {

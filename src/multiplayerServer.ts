@@ -79,6 +79,8 @@ export interface PendingRentDetails {
 export interface PendingOracleDetails {
   titulo: string;
   desc: string;
+  tipo?: 'bencao' | 'maldicao';
+  imagemDataUrl?: string;
   deltaSaldo: number;
   teleporteCasa: number | null;
   concedeuImunidade: boolean;
@@ -203,6 +205,42 @@ function sanitizeCustomTiles(boardCfg: any): { tiles: OnlineTileState[]; meta: a
   const rows = len <= 10 ? (len === 10 ? 4 : 3) : len <= 14 ? (len === 14 ? 5 : 4) : len <= 18 ? (len === 18 ? 6 : 5) : len <= 22 ? (len === 22 ? 7 : 6) : 7;
   const gridSide = Math.max(cols, rows);
 
+  let normalizedDeck: any = undefined;
+  if (boardCfg.cardDeck && typeof boardCfg.cardDeck === 'object' && Array.isArray(boardCfg.cardDeck.cards)) {
+    const validEff = new Set(['saldo_delta', 'imunidade', 'avancar_casas', 'ir_prisao', 'tributo']);
+    const cleanCards = boardCfg.cardDeck.cards
+      .slice(0, 24)
+      .map((c: any, idx: number) => {
+        const rawCardImg = typeof c?.imagemDataUrl === 'string' ? c.imagemDataUrl.trim() : '';
+        const safeCardImg =
+          rawCardImg && /^data:image\/(jpeg|jpg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(rawCardImg) && rawCardImg.length <= 48 * 1024
+            ? rawCardImg
+            : undefined;
+        return {
+          id: String(c?.id || `card_${idx}`).replace(/[^a-zA-Z0-9_-]/g, '').substring(0, 36) || `card_${idx}`,
+          titulo: String(c?.titulo || `Carta ${idx + 1}`).replace(/[<>"'`]/g, '').trim().substring(0, 44),
+          descricao: String(c?.descricao || 'Evento especial do tabuleiro.').replace(/[<>"'`]/g, '').trim().substring(0, 140),
+          tipo: c?.tipo === 'maldicao' ? 'maldicao' : 'bencao',
+          efeito: validEff.has(c?.efeito) ? c.efeito : 'saldo_delta',
+          valor: Math.max(-2500, Math.min(2500, Math.round(Number(c?.valor) || 0))),
+          quantidade: Math.max(1, Math.min(6, Math.round(Number(c?.quantidade) || 1))),
+          ...(safeCardImg ? { imagemDataUrl: safeCardImg } : {})
+        };
+      })
+      .filter((c: any) => c.titulo.length >= 2);
+    if (cleanCards.length > 0) {
+      normalizedDeck = {
+        positiveGroupName: String(boardCfg.cardDeck.positiveGroupName || 'Bênçãos').replace(/[<>"'`]/g, '').trim().substring(0, 36),
+        negativeGroupName: String(boardCfg.cardDeck.negativeGroupName || 'Maldições').replace(/[<>"'`]/g, '').trim().substring(0, 36),
+        cards: cleanCards
+      };
+    }
+  }
+
+  const recommendedPieces = Array.isArray(boardCfg.recommendedPieces)
+    ? boardCfg.recommendedPieces.map((x: any) => String(x || '').replace(/[^a-zA-Z0-9_-]/g, '').substring(0, 32)).filter(Boolean).slice(0, 12)
+    : undefined;
+
   return {
     tiles: cleanTiles,
     meta: {
@@ -221,6 +259,8 @@ function sanitizeCustomTiles(boardCfg: any): { tiles: OnlineTileState[]; meta: a
       corFundo: String(boardCfg.corFundo || '#020617').substring(0, 16),
       corDestaque: String(boardCfg.corDestaque || '#fbbf24').substring(0, 16),
       decoracao3d: boardCfg.decoracao3d || 'pilares',
+      ...(normalizedDeck ? { cardDeck: normalizedDeck } : {}),
+      ...(recommendedPieces && recommendedPieces.length > 0 ? { recommendedPieces } : {}),
       casas: cleanTiles
     }
   };
@@ -275,22 +315,79 @@ interface AuthedSocketMeta {
   playerId: number;
 }
 
+export interface OnlinePresenceEntry {
+  playerKey: string;
+  nickname: string;
+  roomCode: string | null;
+  status: 'online' | 'in_room' | 'in_match';
+  updatedAt: number;
+}
+
+export interface DirectRoomInvite {
+  id: string;
+  fromUserKey: string;
+  fromNickname: string;
+  toUserKey: string;
+  toNickname: string;
+  roomCode: string;
+  roomName: string;
+  status: 'pending' | 'accepted' | 'declined' | 'expired' | 'cancelled';
+  createdAt: number;
+  expiresAt: number;
+}
+
+const PRESENCE_TTL_MS = 90 * 1000;
+const INVITE_TTL_MS = 10 * 60 * 1000;
+
 export function createMultiplayerServer(): MultiplayerContext {
   const router = express.Router();
   const rooms = new Map<string, OnlineRoom>();
   const socketMeta = new WeakMap<WebSocket, AuthedSocketMeta>();
   const roomSockets = new Map<string, Set<WebSocket>>();
+  const onlinePresence = new Map<string, OnlinePresenceEntry>();
+  const directInvites = new Map<string, DirectRoomInvite>();
+  const lobbySocketsByUser = new Map<string, Set<WebSocket>>();
+  const socketUserKey = new WeakMap<WebSocket, string>();
 
-  // Clean up stale rooms older than 6 hours every 15 minutes
+  function prunePresenceAndInvites(now = Date.now()) {
+    for (const [k, p] of onlinePresence.entries()) {
+      if (now - p.updatedAt > PRESENCE_TTL_MS) {
+        onlinePresence.delete(k);
+      }
+    }
+    for (const [id, inv] of directInvites.entries()) {
+      if (inv.status === 'pending' && inv.expiresAt < now) {
+        inv.status = 'expired';
+      }
+      if (now - inv.createdAt > 60 * 60 * 1000) {
+        directInvites.delete(id);
+      }
+    }
+  }
+
+  function pushLobbyEvent(playerKey: string, payload: Record<string, any>) {
+    const conns = lobbySocketsByUser.get(playerKey);
+    if (!conns || conns.size === 0) return;
+    const raw = JSON.stringify(payload);
+    for (const ws of conns) {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(raw);
+      }
+    }
+  }
+
+  // Clean up stale rooms/presence/invites periodically
   setInterval(() => {
-    const cutoff = Date.now() - 6 * 60 * 60 * 1000;
+    const now = Date.now();
+    const cutoff = now - 6 * 60 * 60 * 1000;
     for (const [code, room] of rooms.entries()) {
       if (room.updatedAt < cutoff) {
         rooms.delete(code);
         roomSockets.delete(code);
       }
     }
-  }, 15 * 60 * 1000);
+    prunePresenceAndInvites(now);
+  }, 60 * 1000);
 
   function buildRoomSnapshot(room: OnlineRoom) {
     return {
@@ -475,61 +572,127 @@ export function createMultiplayerServer(): MultiplayerContext {
     if (tile.tipo === 'bencao') {
       const bonusOraculo = !room.competitiveSymmetric && player.classeId === 'oraculo' ? 80 : 0;
       const penEstrategista = !room.competitiveSymmetric && player.classeId === 'estrategista' ? 25 : 0;
-      const rollOracle = crypto.randomInt(0, 5);
+      const deckCards: any[] = Array.isArray(room.customBoardMeta?.cardDeck?.cards)
+        ? room.customBoardMeta.cardDeck.cards
+        : [];
       let pending: PendingOracleDetails;
 
-      if (rollOracle === 0) {
-        const gain = 400 + bonusOraculo;
-        player.saldo += gain;
+      if (deckCards.length > 0) {
+        const weightedPool: any[] = [];
+        for (const card of deckCards) {
+          const copies = Math.max(1, Math.min(6, Math.round(Number(card?.quantidade) || 1)));
+          for (let q = 0; q < copies; q++) weightedPool.push(card);
+        }
+        const chosen = weightedPool[crypto.randomInt(0, weightedPool.length)] || deckCards[0];
+        let deltaSaldo = 0;
+        let teleporteCasa: number | null = null;
+        let concedeuImunidade = false;
+
+        if (chosen.efeito === 'imunidade') {
+          player.imunidadeTaxa = true;
+          concedeuImunidade = true;
+        } else if (chosen.efeito === 'avancar_casas') {
+          const steps = Math.max(1, Math.min(6, Math.abs(Math.round(Number(chosen.valor) || 2))));
+          const novaPos = (player.pos + steps) % room.tiles.length;
+          player.pos = novaPos;
+          teleporteCasa = novaPos;
+        } else if (chosen.efeito === 'ir_prisao') {
+          const prisonIdx = room.tiles.findIndex((t) => t.tipo === 'prisao');
+          if (prisonIdx >= 0) {
+            player.pos = prisonIdx;
+            teleporteCasa = prisonIdx;
+          }
+          player.preso = true;
+          player.turnosPreso = 0;
+        } else if (chosen.efeito === 'tributo') {
+          const tributeVal = Math.max(50, Math.abs(Math.round(Number(chosen.valor) || 200)));
+          if (chosen.tipo === 'bencao') {
+            deltaSaldo = tributeVal + bonusOraculo;
+            player.saldo += deltaSaldo;
+          } else {
+            const totalLoss = tributeVal + penEstrategista;
+            deltaSaldo = -totalLoss;
+            player.saldo -= totalLoss;
+          }
+        } else {
+          const rawVal = Math.round(Number(chosen.valor) || 0);
+          if (rawVal >= 0) {
+            deltaSaldo = rawVal + bonusOraculo;
+          } else {
+            deltaSaldo = rawVal - penEstrategista;
+          }
+          player.saldo += deltaSaldo;
+        }
+
         pending = {
-          titulo: 'Bênção de Hermes ⚡',
-          desc: `Os mensageiros divinos concederam velocidade e tesouro. Você recebe +$ ${gain}!`,
-          deltaSaldo: gain,
-          teleporteCasa: null,
-          concedeuImunidade: false
-        };
-      } else if (rollOracle === 1) {
-        const loss = 250 + penEstrategista;
-        player.saldo -= loss;
-        pending = {
-          titulo: 'Fúria de Ares ⚔️',
-          desc: `Uma batalha nas fronteiras custou recursos sagrados. Pague $ ${loss} aos templos.`,
-          deltaSaldo: -loss,
-          teleporteCasa: null,
-          concedeuImunidade: false
-        };
-      } else if (rollOracle === 2) {
-        player.imunidadeTaxa = true;
-        pending = {
-          titulo: 'Sabedoria de Atena 🦉',
-          desc: 'A deusa da estratégia lhe concede imunidade ao próximo aluguel!',
-          deltaSaldo: 0,
-          teleporteCasa: null,
-          concedeuImunidade: true
-        };
-      } else if (rollOracle === 3) {
-        const gain = 300 + bonusOraculo;
-        player.saldo += gain;
-        pending = {
-          titulo: 'Tributo ao Olimpo 🏛️',
-          desc: `Cada jogador no reino envia oferendas para homenagear sua glória. Receba +$ ${gain}!`,
-          deltaSaldo: gain,
-          teleporteCasa: null,
-          concedeuImunidade: false
+          titulo: chosen.titulo,
+          desc: chosen.descricao,
+          tipo: chosen.tipo === 'maldicao' ? 'maldicao' : 'bencao',
+          ...(chosen.imagemDataUrl ? { imagemDataUrl: chosen.imagemDataUrl } : {}),
+          deltaSaldo,
+          teleporteCasa,
+          concedeuImunidade
         };
       } else {
-        const novaPos = (player.pos + 2) % room.tiles.length;
-        player.pos = novaPos;
-        pending = {
-          titulo: 'Mar Tempestuoso de Poseidon 🌊',
-          desc: 'Uma onda colossal empurra seu peão 2 casas adiante!',
-          deltaSaldo: 0,
-          teleporteCasa: novaPos,
-          concedeuImunidade: false
-        };
+        const rollOracle = crypto.randomInt(0, 5);
+        if (rollOracle === 0) {
+          const gain = 400 + bonusOraculo;
+          player.saldo += gain;
+          pending = {
+            titulo: 'Bênção de Hermes ⚡',
+            desc: `Os mensageiros divinos concederam velocidade e tesouro. Você recebe +$ ${gain}!`,
+            tipo: 'bencao',
+            deltaSaldo: gain,
+            teleporteCasa: null,
+            concedeuImunidade: false
+          };
+        } else if (rollOracle === 1) {
+          const loss = 250 + penEstrategista;
+          player.saldo -= loss;
+          pending = {
+            titulo: 'Fúria de Ares ⚔️',
+            desc: `Uma batalha nas fronteiras custou recursos sagrados. Pague $ ${loss} aos templos.`,
+            tipo: 'maldicao',
+            deltaSaldo: -loss,
+            teleporteCasa: null,
+            concedeuImunidade: false
+          };
+        } else if (rollOracle === 2) {
+          player.imunidadeTaxa = true;
+          pending = {
+            titulo: 'Sabedoria de Atena 🦉',
+            desc: 'A deusa da estratégia lhe concede imunidade ao próximo aluguel!',
+            tipo: 'bencao',
+            deltaSaldo: 0,
+            teleporteCasa: null,
+            concedeuImunidade: true
+          };
+        } else if (rollOracle === 3) {
+          const gain = 300 + bonusOraculo;
+          player.saldo += gain;
+          pending = {
+            titulo: 'Tributo ao Olimpo 🏛️',
+            desc: `Cada jogador no reino envia oferendas para homenagear sua glória. Receba +$ ${gain}!`,
+            tipo: 'bencao',
+            deltaSaldo: gain,
+            teleporteCasa: null,
+            concedeuImunidade: false
+          };
+        } else {
+          const novaPos = (player.pos + 2) % room.tiles.length;
+          player.pos = novaPos;
+          pending = {
+            titulo: 'Mar Tempestuoso de Poseidon 🌊',
+            desc: 'Uma onda colossal empurra seu peão 2 casas adiante!',
+            tipo: 'bencao',
+            deltaSaldo: 0,
+            teleporteCasa: novaPos,
+            concedeuImunidade: false
+          };
+        }
       }
 
-      pushHistory(room, `🔮 Oráculo de Delfos: ${pending.titulo} (${player.nome})`);
+      pushHistory(room, `🔮 Carta do Tabuleiro: ${pending.titulo} (${player.nome})`);
       const gameEnded = checkBankruptcyServer(room, player);
       if (gameEnded) {
         return { kind: 'MATCH_FINISHED', winnerId: room.winnerId };
@@ -743,12 +906,172 @@ export function createMultiplayerServer(): MultiplayerContext {
     return res.json({ success: true });
   });
 
+  // -------------------- PRESENÇA ONLINE & CONVITES DIRETOS (PARTE 10) --------------------
+  router.post('/presence', (req, res) => {
+    const nickname = sanitizeNick(req.body?.nickname || req.body?.username || '', '');
+    if (!nickname || nickname.length < 2) {
+      return res.status(400).json({ error: 'Identificação de jogador inválida para presença online.' });
+    }
+    const playerKey = nickname.toLowerCase();
+    const roomCodeRaw = req.body?.roomCode ? String(req.body.roomCode).trim().toUpperCase() : null;
+    const room = roomCodeRaw ? rooms.get(roomCodeRaw) : undefined;
+    const status: 'online' | 'in_room' | 'in_match' =
+      room?.status === 'playing' ? 'in_match' : room ? 'in_room' : 'online';
+
+    const now = Date.now();
+    prunePresenceAndInvites(now);
+    const entry: OnlinePresenceEntry = {
+      playerKey,
+      nickname,
+      roomCode: room ? room.code : null,
+      status,
+      updatedAt: now
+    };
+    onlinePresence.set(playerKey, entry);
+    return res.json({ success: true, entry });
+  });
+
+  router.get('/online', (req, res) => {
+    const now = Date.now();
+    prunePresenceAndInvites(now);
+    const selfKey = sanitizeNick(String(req.query.self || ''), '').toLowerCase();
+    const list = Array.from(onlinePresence.values())
+      .filter((p) => !selfKey || p.playerKey !== selfKey)
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, 60);
+    return res.json({ success: true, players: list });
+  });
+
+  router.post('/invites', (req, res) => {
+    const now = Date.now();
+    prunePresenceAndInvites(now);
+    const fromNickname = sanitizeNick(req.body?.fromNickname || req.body?.fromUsername || '', '');
+    const toNickname = sanitizeNick(req.body?.toNickname || req.body?.toUsername || '', '');
+    const roomCode = String(req.body?.roomCode || '').trim().toUpperCase();
+
+    if (!fromNickname || !toNickname || !roomCode) {
+      return res.status(400).json({ error: 'Remetente, destinatário e código da sala são obrigatórios.' });
+    }
+    const fromUserKey = fromNickname.toLowerCase();
+    const toUserKey = toNickname.toLowerCase();
+    if (fromUserKey === toUserKey) {
+      return res.status(400).json({ error: 'Você não pode enviar convite para si mesmo.' });
+    }
+
+    const room = rooms.get(roomCode);
+    if (!room) {
+      return res.status(404).json({ error: 'A sala selecionada não existe mais.' });
+    }
+    if (room.status !== 'waiting') {
+      return res.status(409).json({ error: 'A partida desta sala já foi iniciada.' });
+    }
+    if (room.players.length >= room.maxPlayers) {
+      return res.status(409).json({ error: 'A sala já está lotada.' });
+    }
+
+    const duplicatePending = Array.from(directInvites.values()).find(
+      (i) => i.status === 'pending' && i.fromUserKey === fromUserKey && i.toUserKey === toUserKey && i.roomCode === roomCode
+    );
+    if (duplicatePending) {
+      return res.status(409).json({ error: `Já existe um convite pendente para ${toNickname} nesta sala.` });
+    }
+
+    const invite: DirectRoomInvite = {
+      id: `inv_${now}_${crypto.randomBytes(4).toString('hex')}`,
+      fromUserKey,
+      fromNickname,
+      toUserKey,
+      toNickname,
+      roomCode,
+      roomName: room.nome,
+      status: 'pending',
+      createdAt: now,
+      expiresAt: now + INVITE_TTL_MS
+    };
+    directInvites.set(invite.id, invite);
+    pushLobbyEvent(toUserKey, { type: 'INVITE_RECEIVED', invite });
+
+    return res.status(201).json({ success: true, invite });
+  });
+
+  router.get('/invites', (req, res) => {
+    const now = Date.now();
+    prunePresenceAndInvites(now);
+    const playerKey = sanitizeNick(String(req.query.nickname || req.query.username || ''), '').toLowerCase();
+    if (!playerKey) {
+      return res.json({ success: true, incoming: [], outgoing: [] });
+    }
+    const incoming = Array.from(directInvites.values())
+      .filter((i) => i.toUserKey === playerKey && i.status === 'pending')
+      .sort((a, b) => b.createdAt - a.createdAt);
+    const outgoing = Array.from(directInvites.values())
+      .filter((i) => i.fromUserKey === playerKey)
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, 15);
+    return res.json({ success: true, incoming, outgoing });
+  });
+
+  router.post('/invites/:id/respond', (req, res) => {
+    const now = Date.now();
+    prunePresenceAndInvites(now);
+    const inv = directInvites.get(req.params.id);
+    if (!inv) return res.status(404).json({ error: 'Convite não encontrado.' });
+
+    const actorKey = sanitizeNick(req.body?.nickname || req.body?.username || '', '').toLowerCase();
+    if (actorKey && actorKey !== inv.toUserKey) {
+      return res.status(403).json({ error: 'Apenas o jogador convidado pode responder a este convite.' });
+    }
+    if (inv.status !== 'pending') {
+      return res.status(409).json({ error: `Este convite já está ${inv.status}.` });
+    }
+
+    const accept = req.body?.action === 'accept' || req.body?.accept === true;
+    if (!accept) {
+      inv.status = 'declined';
+      pushLobbyEvent(inv.fromUserKey, { type: 'INVITE_UPDATED', invite: inv });
+      return res.json({ success: true, invite: inv });
+    }
+
+    const room = rooms.get(inv.roomCode);
+    if (!room || room.status !== 'waiting' || room.players.length >= room.maxPlayers) {
+      inv.status = 'expired';
+      return res.status(409).json({ error: 'Sala indisponível, lotada ou partida já iniciada.' });
+    }
+
+    inv.status = 'accepted';
+    pushLobbyEvent(inv.fromUserKey, { type: 'INVITE_UPDATED', invite: inv });
+    return res.json({ success: true, invite: inv, roomCode: inv.roomCode });
+  });
+
   // -------------------- WEBSOCKET SERVER (/ws) --------------------
   function handleWsAction(ws: WebSocket, msg: any) {
     if (!msg || typeof msg !== 'object') return;
 
     if (msg.type === 'PING') {
       ws.send(JSON.stringify({ type: 'PONG', ts: Date.now() }));
+      return;
+    }
+
+    if (msg.type === 'PRESENCE_AUTH') {
+      const nick = sanitizeNick(msg.nickname || msg.username || '', '');
+      if (nick.length >= 2) {
+        const key = nick.toLowerCase();
+        const prev = socketUserKey.get(ws);
+        if (prev && prev !== key) {
+          lobbySocketsByUser.get(prev)?.delete(ws);
+        }
+        socketUserKey.set(ws, key);
+        if (!lobbySocketsByUser.has(key)) lobbySocketsByUser.set(key, new Set());
+        lobbySocketsByUser.get(key)!.add(ws);
+        onlinePresence.set(key, {
+          playerKey: key,
+          nickname: nick,
+          roomCode: msg.roomCode ? String(msg.roomCode).trim().toUpperCase() : null,
+          status: msg.roomCode ? 'in_room' : 'online',
+          updatedAt: Date.now()
+        });
+        ws.send(JSON.stringify({ type: 'PRESENCE_AUTH_OK', nickname: nick }));
+      }
       return;
     }
 
@@ -1035,6 +1358,10 @@ export function createMultiplayerServer(): MultiplayerContext {
       });
 
       ws.on('close', () => {
+        const uKey = socketUserKey.get(ws);
+        if (uKey) {
+          lobbySocketsByUser.get(uKey)?.delete(ws);
+        }
         const meta = socketMeta.get(ws);
         if (!meta) return;
         const set = roomSockets.get(meta.roomCode);

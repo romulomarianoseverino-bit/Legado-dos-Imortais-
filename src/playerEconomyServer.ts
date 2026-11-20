@@ -5,14 +5,34 @@ import crypto from 'crypto';
 import { validateCustomBoardConfig, CustomBoardConfig } from './customBoard';
 import { PLANNED_MANIFEST_SAMPLE } from './versionManifest';
 
+export type EconomyCurrency = 'coins' | 'paidCoins';
+
 export interface EconomyTransaction {
   id: string;
   idempotencyKey?: string;
-  type: 'daily_reward' | 'cosmetic_purchase' | 'ad_reward' | 'system_grant';
+  currency?: EconomyCurrency;
+  type:
+    | 'daily_reward'
+    | 'match_reward'
+    | 'cosmetic_purchase'
+    | 'ad_reward'
+    | 'system_grant'
+    | 'bonus_credit'
+    | 'premium_grant'
+    | 'subscription_event';
   amount: number; // positive = credit, negative = debit
   balanceAfter: number;
   description: string;
   createdAt: number;
+}
+
+export interface PremiumSubscriptionState {
+  status: 'none' | 'active' | 'cancelled' | 'expired';
+  planId: string | null;
+  startedAt: number | null;
+  expiresAt: number | null;
+  autoRenew: boolean;
+  history: Array<{ action: string; at: number; note?: string }>;
 }
 
 export interface PlayerAccountRecord {
@@ -20,8 +40,12 @@ export interface PlayerAccountRecord {
   username: string;
   usernameKey: string;
   passwordHash: string; // scrypt "salt:derivedHex"
+  recoveryHash?: string; // scrypt "salt:derivedHex"
   coins: number;
+  paidCoins: number;
+  verifiedEarningsCoins: number;
   isPremium: boolean;
+  premiumSubscription?: PremiumSubscriptionState;
   unlockedCosmetics: string[];
   achievements: string[];
   weeklyRewardCycle: {
@@ -66,6 +90,7 @@ export interface CosmeticItemSpec {
   categoria: 'personagem' | 'tabuleiro' | 'dado';
   descricao: string;
   priceCoins: number;
+  pricePaidCoins?: number;
   premiumIncluded?: boolean;
   icon: string;
   cosmeticOnly: true;
@@ -81,6 +106,7 @@ export const COSMETIC_CATALOG: CosmeticItemSpec[] = [
     categoria: 'personagem',
     descricao: 'Ornamento dourado de campeonato para o Criador 3D.',
     priceCoins: 35,
+    pricePaidCoins: 15,
     icon: '👑',
     cosmeticOnly: true
   },
@@ -90,6 +116,7 @@ export const COSMETIC_CATALOG: CosmeticItemSpec[] = [
     categoria: 'personagem',
     descricao: 'Traço estilizado de chamas para seu avatar 3D (somente visual).',
     priceCoins: 60,
+    pricePaidCoins: 25,
     icon: '🔥',
     cosmeticOnly: true
   },
@@ -99,6 +126,7 @@ export const COSMETIC_CATALOG: CosmeticItemSpec[] = [
     categoria: 'dado',
     descricao: 'Estilo visual vulcânico para rolagens de dado (RNG 100% justo).',
     priceCoins: 45,
+    pricePaidCoins: 20,
     icon: '🎲',
     cosmeticOnly: true
   },
@@ -108,6 +136,7 @@ export const COSMETIC_CATALOG: CosmeticItemSpec[] = [
     categoria: 'dado',
     descricao: 'Acabamento translúcido frio para partidas temáticas.',
     priceCoins: 50,
+    pricePaidCoins: 22,
     icon: '💎',
     cosmeticOnly: true
   },
@@ -117,6 +146,7 @@ export const COSMETIC_CATALOG: CosmeticItemSpec[] = [
     categoria: 'tabuleiro',
     descricao: 'Paleta cósmica e cristais estelares para o Criador de Tabuleiros.',
     priceCoins: 70,
+    pricePaidCoins: 30,
     icon: '🪐',
     cosmeticOnly: true
   },
@@ -126,6 +156,7 @@ export const COSMETIC_CATALOG: CosmeticItemSpec[] = [
     categoria: 'tabuleiro',
     descricao: 'Visual retrô original de blocos vibrantes no Criador de Tabuleiros.',
     priceCoins: 55,
+    pricePaidCoins: 24,
     icon: '🟩',
     cosmeticOnly: true
   }
@@ -226,6 +257,7 @@ export interface PlayerEconomyRouterOptions {
   backupsDir: string;
   getClientIp: (req: express.Request) => string;
   rankingsFile?: string;
+  verifyMatchToken?: (token: string) => Record<string, any> | null;
 }
 
 export function createPlayerEconomyRouter(opts: PlayerEconomyRouterOptions): express.Router {
@@ -298,7 +330,36 @@ export function createPlayerEconomyRouter(opts: PlayerEconomyRouterOptions): exp
     next();
   });
 
+  const ensureAccountDefaults = (user: PlayerAccountRecord, nowMs = Date.now()): void => {
+    if (!Number.isFinite(user.coins)) user.coins = 0;
+    if (!Number.isFinite(user.paidCoins)) user.paidCoins = 0;
+    if (!Number.isFinite(user.verifiedEarningsCoins)) user.verifiedEarningsCoins = 0;
+    if (!Array.isArray(user.unlockedCosmetics)) user.unlockedCosmetics = [];
+    if (!Array.isArray(user.achievements)) user.achievements = ['first_account'];
+    if (!Array.isArray(user.transactions)) user.transactions = [];
+    if (!user.premiumSubscription) {
+      user.premiumSubscription = {
+        status: user.isPremium ? 'active' : 'none',
+        planId: user.isPremium ? 'pantheon_pass' : null,
+        startedAt: user.isPremium ? user.createdAt || nowMs : null,
+        expiresAt: null,
+        autoRenew: Boolean(user.isPremium),
+        history: []
+      };
+    }
+    if (
+      user.premiumSubscription.expiresAt &&
+      user.premiumSubscription.expiresAt < nowMs &&
+      (user.premiumSubscription.status === 'active' || user.premiumSubscription.status === 'cancelled')
+    ) {
+      user.premiumSubscription.status = 'expired';
+      user.premiumSubscription.autoRenew = false;
+      user.isPremium = false;
+    }
+  };
+
   const ensureCycleRollover = (user: PlayerAccountRecord, nowMs = Date.now()): void => {
+    ensureAccountDefaults(user, nowMs);
     const info = getIsoWeekCycleInfo(nowMs);
     if (!user.weeklyRewardCycle || user.weeklyRewardCycle.weekStartUtcKey !== info.weekStartUtcKey) {
       user.weeklyRewardCycle = {
@@ -356,7 +417,11 @@ export function createPlayerEconomyRouter(opts: PlayerEconomyRouterOptions): exp
       userId: user.userId,
       username: user.username,
       coins: user.coins,
+      paidCoins: user.paidCoins,
+      verifiedEarningsCoins: user.verifiedEarningsCoins,
+      hasRecoveryKey: Boolean(user.recoveryHash),
       isPremium: Boolean(user.isPremium),
+      premiumSubscription: user.premiumSubscription,
       unlockedCosmetics: user.unlockedCosmetics,
       achievements: user.achievements,
       verifiedWins: user.verifiedWins,
@@ -374,7 +439,10 @@ export function createPlayerEconomyRouter(opts: PlayerEconomyRouterOptions): exp
         nextResetUtcIso: info.nextResetUtcIso,
         schedule: WEEKLY_DAILY_SCHEDULE
       },
-      recentTransactions: user.transactions.slice(0, 20),
+      recentTransactions: user.transactions.slice(0, 20).map((t) => ({
+        ...t,
+        currency: t.currency || 'coins'
+      })),
       serverTimeIso: new Date(nowMs).toISOString()
     };
   };
@@ -397,6 +465,7 @@ export function createPlayerEconomyRouter(opts: PlayerEconomyRouterOptions): exp
     const accounts = loadAccounts();
     const user = accounts[session.userId];
     if (!user) return null;
+    ensureAccountDefaults(user);
     return { user, accounts };
   };
 
@@ -427,13 +496,25 @@ export function createPlayerEconomyRouter(opts: PlayerEconomyRouterOptions): exp
       const now = Date.now();
       const info = getIsoWeekCycleInfo(now);
       const userId = `u_${now}_${crypto.randomBytes(6).toString('hex')}`;
+      const rawRecovery = typeof req.body?.recoveryKey === 'string' ? req.body.recoveryKey.trim() : '';
       const newUser: PlayerAccountRecord = {
         userId,
         username,
         usernameKey: key,
         passwordHash: hashPasswordScrypt(password),
+        ...(rawRecovery.length >= 8 ? { recoveryHash: hashPasswordScrypt(rawRecovery) } : {}),
         coins: 0,
+        paidCoins: 0,
+        verifiedEarningsCoins: 0,
         isPremium: false,
+        premiumSubscription: {
+          status: 'none',
+          planId: null,
+          startedAt: null,
+          expiresAt: null,
+          autoRenew: false,
+          history: []
+        },
         unlockedCosmetics: [],
         achievements: ['first_account'],
         weeklyRewardCycle: {
@@ -591,6 +672,83 @@ export function createPlayerEconomyRouter(opts: PlayerEconomyRouterOptions): exp
   });
 
   // =============================================================
+  // PARTE 12: RECOVERY KEY SETUP & PASSWORD RESET (WITHOUT EMAIL SERVER)
+  // =============================================================
+  const recoveryFailures = new Map<string, { fails: number; lockUntil: number }>();
+
+  router.post('/player/recovery/setup', (req, res) => {
+    const ctx = authenticatePlayer(req);
+    if (!ctx) return res.status(401).json({ error: 'Faça login para configurar sua chave de recuperação.' });
+
+    const recoveryKey = String(req.body?.recoveryKey || '').trim();
+    if (recoveryKey.length < 8 || recoveryKey.length > 128) {
+      return res.status(400).json({ error: 'A chave de recuperação deve ter entre 8 e 128 caracteres.' });
+    }
+
+    ctx.user.recoveryHash = hashPasswordScrypt(recoveryKey);
+    ctx.user.updatedAt = Date.now();
+    saveAccounts(ctx.accounts);
+
+    return res.json({
+      success: true,
+      hasRecoveryKey: true,
+      message: 'Chave de recuperação salva com hash criptográfico scrypt. Guarde-a em local seguro (não há envio de e-mail neste servidor).'
+    });
+  });
+
+  router.post('/player/recovery/reset', (req, res) => {
+    const ip = opts.getClientIp(req);
+    const username = normalizeHandle(req.body?.username || '');
+    const recoveryKey = String(req.body?.recoveryKey || '').trim();
+    const newPassword = String(req.body?.newPassword || '');
+
+    if (!username || recoveryKey.length < 8 || newPassword.length < 6 || newPassword.length > 128) {
+      return res.status(400).json({ error: 'Informe usuário, chave de recuperação (>= 8 caracteres) e nova senha (>= 6 caracteres).' });
+    }
+
+    const failKey = `rec:${ip}:${username.toLowerCase()}`;
+    const now = Date.now();
+    const failRec = recoveryFailures.get(failKey);
+    if (failRec && failRec.lockUntil > now) {
+      return res.status(429).json({ error: 'Muitas tentativas de recuperação inválidas. Aguarde 10 minutos.' });
+    }
+
+    const accounts = loadAccounts();
+    const found = Object.values(accounts).find((a) => a.usernameKey === username.toLowerCase());
+    if (!found || !found.recoveryHash || !verifyPasswordScrypt(recoveryKey, found.recoveryHash)) {
+      const nextFails = (failRec?.fails || 0) + 1;
+      recoveryFailures.set(failKey, {
+        fails: nextFails,
+        lockUntil: nextFails >= 5 ? now + 10 * 60 * 1000 : 0
+      });
+      return res.status(401).json({ error: 'Chave de recuperação inválida ou não configurada para esta conta.' });
+    }
+
+    recoveryFailures.delete(failKey);
+    ensureAccountDefaults(found, now);
+    found.passwordHash = hashPasswordScrypt(newPassword);
+    found.updatedAt = now;
+    accounts[found.userId] = found;
+    saveAccounts(accounts);
+
+    // Revoke previous active sessions for security
+    const sessions = loadSessions();
+    let changedSess = false;
+    for (const [tok, sess] of Object.entries(sessions)) {
+      if (sess.userId === found.userId) {
+        delete sessions[tok];
+        changedSess = true;
+      }
+    }
+    if (changedSess) saveSessions(sessions);
+
+    return res.json({
+      success: true,
+      message: 'Senha redefinida com sucesso via Chave de Recuperação. Faça login com sua nova senha.'
+    });
+  });
+
+  // =============================================================
   // ETAPA 7 & 8: DAILY REWARD (SERVER CLOCK, CAP 100/WEEK, RESET MONDAY)
   // =============================================================
   router.get('/economy/daily-reward/status', (req, res) => {
@@ -675,6 +833,7 @@ export function createPlayerEconomyRouter(opts: PlayerEconomyRouterOptions): exp
       user.transactions.unshift({
         id: `tx_${now}_${crypto.randomBytes(4).toString('hex')}`,
         idempotencyKey: reqIdempotencyKey || `daily_${info.weekStartUtcKey}_${info.todayUtcKey}`,
+        currency: 'coins',
         type: 'daily_reward',
         amount: granted,
         balanceAfter: user.coins,
@@ -694,6 +853,117 @@ export function createPlayerEconomyRouter(opts: PlayerEconomyRouterOptions): exp
     } finally {
       dailyClaimInFlight.delete(user.userId);
     }
+  });
+
+  // =============================================================
+  // PARTES 6 & 8: MATCH REWARDS (INDEPENDENT OF 100/WEEK CAP) & TRANSACTIONS LEDGER
+  // =============================================================
+  router.get('/economy/transactions', (req, res) => {
+    const ctx = authenticatePlayer(req);
+    if (!ctx) return res.status(401).json({ error: 'Autenticação necessária para consultar extrato.' });
+    const currencyFilter = String(req.query.currency || '').trim();
+    const typeFilter = String(req.query.type || '').trim();
+    const rows = ctx.user.transactions
+      .map((t) => ({ ...t, currency: t.currency || 'coins' }))
+      .filter((t) => (!currencyFilter ? true : t.currency === currencyFilter))
+      .filter((t) => (!typeFilter ? true : t.type === typeFilter))
+      .slice(0, 80);
+    return res.json({
+      success: true,
+      coins: ctx.user.coins,
+      paidCoins: ctx.user.paidCoins,
+      verifiedEarningsCoins: ctx.user.verifiedEarningsCoins,
+      transactions: rows
+    });
+  });
+
+  router.post('/economy/match-reward', (req, res) => {
+    const ctx = authenticatePlayer(req);
+    if (!ctx) return res.status(401).json({ error: 'Autenticação necessária para creditar recompensa de partida.' });
+
+    const body = req.body || {};
+    const matchToken = String(body.matchToken || '').trim();
+    let matchId = String(body.matchId || '').trim().replace(/[^a-zA-Z0-9_-]/g, '').substring(0, 48);
+    const turnsPlayed = Math.max(0, Math.min(2000, parseInt(String(body.turnsPlayed || '0'), 10) || 0));
+    const mode: 'ai' | 'online' = body.mode === 'online' ? 'online' : 'ai';
+    let won = Boolean(body.won);
+
+    const verified = matchToken && opts.verifyMatchToken ? opts.verifyMatchToken(matchToken) : null;
+    if (opts.verifyMatchToken && (!verified || typeof verified.matchId !== 'string')) {
+      return res.status(403).json({ error: 'Token HMAC de partida inválido ou ausente para recompensa.' });
+    }
+    if (verified) {
+      if (verified.expiresAt && Date.now() > Number(verified.expiresAt)) {
+        return res.status(400).json({ error: 'Token da partida expirado.' });
+      }
+      matchId = String(verified.matchId);
+    }
+    if (!matchId || turnsPlayed < 1) {
+      return res.status(400).json({ error: 'Partida precisa ter ID válido e ao menos 1 turno jogado.' });
+    }
+
+    // Check rankings-data.json if this matchId was recorded, to keep win outcome consistent
+    if (opts.rankingsFile && fs.existsSync(opts.rankingsFile)) {
+      const rStore = readJsonSafe<{ matches?: Array<{ matchId: string; status?: string; winnerNickname?: string | null }> }>(
+        opts.rankingsFile,
+        {}
+      );
+      const recMatch = (rStore.matches || []).find((m) => m.matchId === matchId);
+      if (recMatch) {
+        if (recMatch.status !== 'completed') {
+          return res.status(400).json({ error: 'Apenas partidas concluídas geram recompensa em moedas.' });
+        }
+        if (recMatch.winnerNickname) {
+          won = recMatch.winnerNickname.trim().toLowerCase() === ctx.user.usernameKey;
+        }
+      }
+    }
+
+    const user = ctx.user;
+    ensureAccountDefaults(user);
+    const idem = `match_reward:${matchId}`;
+    if (user.transactions.some((t) => t.idempotencyKey === idem)) {
+      return res.json({
+        success: true,
+        deduplicated: true,
+        grantedCoins: 0,
+        player: sanitizeUserPublic(user)
+      });
+    }
+
+    const now = Date.now();
+    const rewardCoins = won ? (mode === 'online' ? 30 : 25) : 10;
+
+    // IMPORTANTE: Recompensa de partida credita moedas tradicionais SEM consumir o teto semanal de login (100/semana)
+    user.coins += rewardCoins;
+    user.verifiedEarningsCoins += rewardCoins;
+    user.verifiedMatches += 1;
+    if (won) user.verifiedWins += 1;
+    user.updatedAt = now;
+
+    user.transactions.unshift({
+      id: `tx_${now}_${crypto.randomBytes(4).toString('hex')}`,
+      idempotencyKey: idem,
+      currency: 'coins',
+      type: 'match_reward',
+      amount: rewardCoins,
+      balanceAfter: user.coins,
+      description: won
+        ? `Vitória em partida ${mode === 'online' ? 'Online' : 'Vs IA'} (${matchId})`
+        : `Participação em partida concluída (${matchId})`,
+      createdAt: now
+    });
+    if (user.transactions.length > 200) user.transactions = user.transactions.slice(0, 200);
+
+    syncAchievementsFromState(user);
+    saveAccounts(ctx.accounts);
+
+    return res.json({
+      success: true,
+      grantedCoins: rewardCoins,
+      won,
+      player: sanitizeUserPublic(user, now)
+    });
   });
 
   // =============================================================
@@ -753,6 +1023,7 @@ export function createPlayerEconomyRouter(opts: PlayerEconomyRouterOptions): exp
       return res.status(401).json({ error: 'Faça login para comprar cosméticos desbloqueáveis.' });
     }
     const itemId = String(req.body?.itemId || '').trim();
+    const currency: EconomyCurrency = req.body?.currency === 'paidCoins' ? 'paidCoins' : 'coins';
     const idempotencyKey = String(req.body?.idempotencyKey || '').trim().substring(0, 64);
     const item = COSMETIC_CATALOG.find((c) => c.id === itemId);
     if (!item) {
@@ -760,6 +1031,7 @@ export function createPlayerEconomyRouter(opts: PlayerEconomyRouterOptions): exp
     }
 
     const user = ctx.user;
+    ensureAccountDefaults(user);
     if (idempotencyKey && user.transactions.some((t) => t.idempotencyKey === idempotencyKey)) {
       return res.json({
         success: true,
@@ -773,23 +1045,33 @@ export function createPlayerEconomyRouter(opts: PlayerEconomyRouterOptions): exp
       return res.status(409).json({ error: 'Você já possui este item cosmético desbloqueado.' });
     }
 
-    if (user.coins < item.priceCoins) {
+    const price = currency === 'paidCoins' ? item.pricePaidCoins ?? item.priceCoins : item.priceCoins;
+    const currentBal = currency === 'paidCoins' ? user.paidCoins : user.coins;
+    const currencyLabel = currency === 'paidCoins' ? 'Coroas Imortais (especiais)' : 'moedas tradicionais';
+
+    if (currentBal < price) {
       return res.status(402).json({
-        error: `Saldo insuficiente. Necessário: ${item.priceCoins} moedas (Seu saldo: ${user.coins}).`
+        error: `Saldo insuficiente de ${currencyLabel}. Necessário: ${price} (Seu saldo: ${currentBal}).`
       });
     }
 
     const now = Date.now();
-    user.coins -= item.priceCoins;
+    if (currency === 'paidCoins') {
+      user.paidCoins -= price;
+    } else {
+      user.coins -= price;
+    }
+    const balanceAfter = currency === 'paidCoins' ? user.paidCoins : user.coins;
     user.unlockedCosmetics.push(item.id);
     user.updatedAt = now;
     user.transactions.unshift({
       id: `tx_${now}_${crypto.randomBytes(4).toString('hex')}`,
-      idempotencyKey: idempotencyKey || `buy_${item.id}_${now}`,
+      idempotencyKey: idempotencyKey || `buy_${item.id}_${currency}_${now}`,
+      currency,
       type: 'cosmetic_purchase',
-      amount: -item.priceCoins,
-      balanceAfter: user.coins,
-      description: `Desbloqueio cosmético: ${item.nome}`,
+      amount: -price,
+      balanceAfter,
+      description: `Desbloqueio cosmético (${currency === 'paidCoins' ? 'Coroas' : 'Moedas'}): ${item.nome}`,
       createdAt: now
     });
     if (user.transactions.length > 200) user.transactions = user.transactions.slice(0, 200);
@@ -800,12 +1082,13 @@ export function createPlayerEconomyRouter(opts: PlayerEconomyRouterOptions): exp
     return res.json({
       success: true,
       item,
+      currency,
       player: sanitizeUserPublic(user, now)
     });
   });
 
   // =============================================================
-  // ETAPA 11: HONEST FREE VS PREMIUM ENTITLEMENTS CATALOG
+  // ETAPA 11 & PARTE 7: HONEST FREE VS PREMIUM ENTITLEMENTS & SUBSCRIPTION LIFECYCLE
   // =============================================================
   router.get('/entitlements/catalog', (_req, res) => {
     res.json({
@@ -813,6 +1096,81 @@ export function createPlayerEconomyRouter(opts: PlayerEconomyRouterOptions): exp
       matrix: ENTITLEMENTS_MATRIX,
       billingIntegrated: false,
       note: 'Recursos Premium são estritamente cosméticos/criativos e verificados no servidor (sem pay-to-win).'
+    });
+  });
+
+  router.get('/entitlements/status', (req, res) => {
+    const ctx = authenticatePlayer(req);
+    if (!ctx) {
+      return res.json({
+        success: true,
+        authenticated: false,
+        billingIntegrated: false,
+        isPremium: false,
+        premiumSubscription: { status: 'none', planId: null, startedAt: null, expiresAt: null, autoRenew: false, history: [] },
+        honestNotice: 'Faturamento oficial (Google Play Billing / Stripe) não conectado neste ambiente.'
+      });
+    }
+    ensureCycleRollover(ctx.user);
+    saveAccounts(ctx.accounts);
+    return res.json({
+      success: true,
+      authenticated: true,
+      billingIntegrated: false,
+      isPremium: Boolean(ctx.user.isPremium),
+      premiumSubscription: ctx.user.premiumSubscription,
+      honestNotice: 'Assinaturas não geram cobrança fictícia sem provedor de faturamento oficial conectado.'
+    });
+  });
+
+  router.post('/entitlements/subscription/cancel', (req, res) => {
+    const ctx = authenticatePlayer(req);
+    if (!ctx) return res.status(401).json({ error: 'Autenticação necessária.' });
+
+    const now = Date.now();
+    ensureAccountDefaults(ctx.user, now);
+    const sub = ctx.user.premiumSubscription!;
+    if (!ctx.user.isPremium && sub.status !== 'active') {
+      return res.status(409).json({ error: 'Não há assinatura Premium ativa para cancelar nesta conta.' });
+    }
+
+    sub.autoRenew = false;
+    sub.status = 'cancelled';
+    if (!sub.expiresAt || sub.expiresAt <= now) {
+      ctx.user.isPremium = false;
+      sub.expiresAt = now;
+    }
+    sub.history.unshift({ action: 'cancel_requested', at: now, note: 'Cancelamento solicitado pelo jogador.' });
+    if (sub.history.length > 20) sub.history.length = 20;
+
+    ctx.user.transactions.unshift({
+      id: `tx_${now}_${crypto.randomBytes(4).toString('hex')}`,
+      currency: 'paidCoins',
+      type: 'subscription_event',
+      amount: 0,
+      balanceAfter: ctx.user.paidCoins,
+      description: 'Assinatura Premium cancelada pelo jogador (auto-renovação desativada).',
+      createdAt: now
+    });
+    ctx.user.updatedAt = now;
+    saveAccounts(ctx.accounts);
+
+    return res.json({
+      success: true,
+      player: sanitizeUserPublic(ctx.user, now),
+      message: ctx.user.isPremium
+        ? 'Renovação automática desativada; os benefícios permanecem até a data de expiração.'
+        : 'Assinatura cancelada com sucesso.'
+    });
+  });
+
+  router.post('/entitlements/subscription/renew', (req, res) => {
+    const ctx = authenticatePlayer(req);
+    if (!ctx) return res.status(401).json({ error: 'Autenticação necessária.' });
+
+    return res.status(503).json({
+      error: 'Faturamento oficial indisponível: Google Play Billing / Stripe ainda não está conectado neste ambiente. Nenhuma assinatura ou cobrança fictícia foi criada.',
+      billingIntegrated: false
     });
   });
 

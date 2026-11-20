@@ -2555,6 +2555,123 @@ app.post('/api/ranking/friends', (req, res) => {
   }
 });
 
+// PARTE 9: Ranking de Riqueza (Moedas Tradicionais Verificadas + Coroas)
+app.get('/api/ranking/wealth', (_req, res) => {
+  try {
+    const accountsPath = path.join(BACKUPS_DIR, 'player-accounts.json');
+    const accounts = fs.existsSync(accountsPath)
+      ? (JSON.parse(fs.readFileSync(accountsPath, 'utf-8') || '{}') as Record<string, any>)
+      : {};
+    const rankStore = loadRankingsStore();
+
+    const rows = Object.values(accounts)
+      .filter((a) => a && typeof a.username === 'string')
+      .map((a) => {
+        const key = String(a.usernameKey || a.username || '').toLowerCase();
+        const rPlayer = rankStore.players?.[key];
+        const coins = Math.max(0, Number(a.coins) || 0);
+        const paidCoins = Math.max(0, Number(a.paidCoins) || 0);
+        const wins = Math.max(Number(a.verifiedWins) || 0, Number(rPlayer?.wins) || 0);
+        return {
+          username: String(a.username),
+          coins,
+          paidCoins,
+          verifiedEarningsCoins: Math.max(0, Number(a.verifiedEarningsCoins) || 0),
+          wins,
+          isPremium: Boolean(a.isPremium),
+          wealthScore: coins + paidCoins * 2
+        };
+      })
+      .sort((a, b) => {
+        if (b.coins !== a.coins) return b.coins - a.coins;
+        if (b.wealthScore !== a.wealthScore) return b.wealthScore - a.wealthScore;
+        return b.wins - a.wins;
+      })
+      .slice(0, 50)
+      .map((row, idx) => ({ position: idx + 1, ...row }));
+
+    return res.json({ success: true, leaderboard: rows });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Erro ao carregar ranking de riqueza: ' + err.message });
+  }
+});
+
+// PARTE 9: Ranking de Criadores de Tabuleiros (Avaliações da Comunidade)
+app.get('/api/ranking/creators', (_req, res) => {
+  try {
+    const boardsPath = path.join(BACKUPS_DIR, 'community-boards.json');
+    const boards = fs.existsSync(boardsPath)
+      ? (JSON.parse(fs.readFileSync(boardsPath, 'utf-8') || '[]') as any[])
+      : [];
+
+    const byAuthor = new Map<
+      string,
+      {
+        authorUsername: string;
+        boardsCount: number;
+        totalRatingSum: number;
+        totalRatingsCount: number;
+        bestBoardName: string;
+        bestScore: number;
+        latestPublishedAt: number;
+      }
+    >();
+
+    for (const entry of boards) {
+      if (!entry || entry.hiddenByModeration) continue;
+      const author = String(entry.authorUsername || entry.board?.autor || 'Criador').trim();
+      if (!author) continue;
+      const key = author.toLowerCase();
+      const rSum = Number(entry.ratingSum) || 0;
+      const rCount = Number(entry.ratingCount) || 0;
+      const avg = rCount > 0 ? rSum / rCount : 0;
+
+      const cur = byAuthor.get(key) || {
+        authorUsername: author,
+        boardsCount: 0,
+        totalRatingSum: 0,
+        totalRatingsCount: 0,
+        bestBoardName: String(entry.board?.nome || 'Tabuleiro'),
+        bestScore: -1,
+        latestPublishedAt: 0
+      };
+
+      cur.boardsCount += 1;
+      cur.totalRatingSum += rSum;
+      cur.totalRatingsCount += rCount;
+      if (avg > cur.bestScore) {
+        cur.bestScore = avg;
+        cur.bestBoardName = String(entry.board?.nome || cur.bestBoardName);
+      }
+      if ((Number(entry.publishedAt) || 0) > cur.latestPublishedAt) {
+        cur.latestPublishedAt = Number(entry.publishedAt) || cur.latestPublishedAt;
+      }
+      byAuthor.set(key, cur);
+    }
+
+    const leaderboard = Array.from(byAuthor.values())
+      .map((c) => ({
+        authorUsername: c.authorUsername,
+        boardsCount: c.boardsCount,
+        totalRatingsCount: c.totalRatingsCount,
+        avgRating: c.totalRatingsCount > 0 ? Number((c.totalRatingSum / c.totalRatingsCount).toFixed(2)) : 0,
+        bestBoardName: c.bestBoardName,
+        latestPublishedAt: c.latestPublishedAt
+      }))
+      .sort((a, b) => {
+        if (b.avgRating !== a.avgRating) return b.avgRating - a.avgRating;
+        if (b.totalRatingsCount !== a.totalRatingsCount) return b.totalRatingsCount - a.totalRatingsCount;
+        return b.boardsCount - a.boardsCount;
+      })
+      .slice(0, 50)
+      .map((row, idx) => ({ position: idx + 1, ...row }));
+
+    return res.json({ success: true, leaderboard });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Erro ao carregar ranking de criadores: ' + err.message });
+  }
+});
+
 const photoAnalyzeAttempts = new Map<string, { count: number; windowStart: number }>();
 
 app.post('/api/character/analyze-photo', async (req, res) => {
@@ -2806,7 +2923,7 @@ app.get('/api/health', (_req, res) => {
   res.json({
     ok: true,
     status: 'online',
-    version: '2.1.0',
+    version: '2.2.0',
     ts: Date.now()
   });
 });
@@ -2816,7 +2933,8 @@ app.use(
   createPlayerEconomyRouter({
     backupsDir: BACKUPS_DIR,
     getClientIp,
-    rankingsFile: RANKINGS_FILE
+    rankingsFile: RANKINGS_FILE,
+    verifyMatchToken: verifyRankingToken
   })
 );
 

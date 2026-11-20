@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Legado dos Imortais</title>
-    <meta name="description" content="Legado dos Imortais — Edição Lendária de Deuses & Bênçãos: Jogo mitológico de tabuleiro com deuses do Olimpo, compra e evolução de territórios e modo online.">
+    <meta name="description" content="Legado dos Imortais — Panteão de Deuses & Bênçãos: Jogo mitológico de tabuleiro com deuses do Olimpo, compra e evolução de territórios e modo online.">
     <meta property="og:title" content="Legado dos Imortais">
-    <meta property="og:description" content="Legado dos Imortais — Edição Lendária de Deuses & Bênçãos: Jogo mitológico de tabuleiro com deuses do Olimpo, compra e evolução de territórios e modo online.">
+    <meta property="og:description" content="Legado dos Imortais — Panteão de Deuses & Bênçãos: Jogo mitológico de tabuleiro com deuses do Olimpo, compra e evolução de territórios e modo online.">
     <meta property="og:type" content="website">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -45,11 +45,16 @@
                 if (onlinePanel) onlinePanel.classList.remove("hidden");
                 if (onlinePanelClassic) onlinePanelClassic.classList.remove("hidden");
                 if (typeof window.inicializarRedePeerJSGlobal === "function") window.inicializarRedePeerJSGlobal();
+                if (typeof window.conectarPresencaGlobalWS === "function") window.conectarPresencaGlobalWS();
+                if (typeof window.enviarHeartbeatPresencaOnline === "function") window.enviarHeartbeatPresencaOnline();
+                if (typeof window.carregarJogadoresOnline === "function") window.carregarJogadoresOnline();
+                if (typeof window.carregarConvitesRecebidosOnline === "function") window.carregarConvitesRecebidosOnline();
                 if (typeof window.trocarAbaOnline === "function") window.trocarAbaOnline('criar');
             } else {
                 if (onlinePanel) onlinePanel.classList.add("hidden");
                 if (onlinePanelClassic) onlinePanelClassic.classList.add("hidden");
             }
+            if (typeof window.atualizarEstadoBotoesIniciarLobby === "function") window.atualizarEstadoBotoesIniciarLobby();
         };
 
         window.selecionarQtd = function(qtd) {
@@ -97,7 +102,11 @@
             }
 
             if (aba === "buscar" && typeof window.renderizarSalasPublicasFotos === "function") window.renderizarSalasPublicasFotos();
-            if (aba === "amigos" && typeof window.renderizarAmigosFotos === "function") window.renderizarAmigosFotos();
+            if (aba === "amigos") {
+                if (typeof window.renderizarAmigosFotos === "function") window.renderizarAmigosFotos();
+                if (typeof window.carregarJogadoresOnline === "function") window.carregarJogadoresOnline();
+                if (typeof window.carregarConvitesRecebidosOnline === "function") window.carregarConvitesRecebidosOnline();
+            }
         };
 
         window.iniciarDoLobby = function() {
@@ -146,9 +155,24 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            opacity: 0.58;
+            opacity: 0.62;
             pointer-events: none;
             z-index: 1;
+        }
+        .sq-card:has(.sq-custom-img)::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(2, 6, 23, 0.72) 0%, rgba(2, 6, 23, 0.42) 50%, rgba(2, 6, 23, 0.84) 100%);
+            pointer-events: none;
+            z-index: 2;
+        }
+        .sq-custom-title-backdrop {
+            background: rgba(2, 6, 23, 0.78);
+            border: 1px solid rgba(251, 191, 36, 0.28);
+            border-radius: 5px;
+            padding: 1px 4px;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
         }
         .sq-img-controls {
             position: absolute;
@@ -271,7 +295,7 @@
             <span class="text-xl sm:text-2xl animate-bounce">⚡</span>
             <div>
                 <h1 class="font-cinzel font-black text-sm sm:text-xl text-amber-400 tracking-wider">LEGADO DOS IMORTAIS</h1>
-                <p class="text-[9px] sm:text-[10px] text-amber-200/70 font-cinzel tracking-widest uppercase">Edição Lendária de Deuses & Bênçãos</p>
+                <p class="text-[9px] sm:text-[10px] text-amber-200/70 font-cinzel tracking-widest uppercase">Panteão de Deuses &amp; Bênçãos</p>
             </div>
         </div>
         <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
@@ -524,7 +548,7 @@
                                 LEGADO DOS IMORTAIS
                             </h1>
                             <span class="px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/50 text-[10px] font-cinzel font-bold text-amber-200 tracking-widest uppercase">
-                                Edição Lendária
+                                Olimpo 3D
                             </span>
                         </div>
                         <p class="text-[10px] sm:text-xs text-amber-200/85 font-cinzel tracking-[0.2em] uppercase">
@@ -571,7 +595,7 @@
                     <section class="lg:col-span-5 flex flex-col justify-between space-y-3.5 bg-slate-950/85 backdrop-blur-md border border-amber-500/45 rounded-3xl p-4 sm:p-5 shadow-[0_0_45px_rgba(2,6,23,0.85)]">
                         <!-- Cena Visual Oficial: Atena, Zeus e Poseidon -->
                         <div class="relative rounded-2xl overflow-hidden border border-amber-400/50 group shadow-xl bg-slate-950">
-                            <img src="/assets/images/legado_dos_imortais_artwork.jpg" alt="Legado dos Imortais — Edição Lendária (Atena, Zeus e Poseidon)" class="w-full h-44 sm:h-48 object-cover object-center filter brightness-[0.95] contrast-[1.06] group-hover:scale-105 transition-transform duration-700" />
+                            <img src="/assets/images/legado_dos_imortais_artwork.jpg" alt="Legado dos Imortais — Panteão de Atena, Zeus e Poseidon" class="w-full h-44 sm:h-48 object-cover object-center filter brightness-[0.95] contrast-[1.06] group-hover:scale-105 transition-transform duration-700" />
                             <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent flex flex-col justify-end p-3 pointer-events-none">
                                 <span class="text-[10px] font-cinzel tracking-[0.2em] text-amber-300 uppercase font-bold drop-shadow">Conselho Supremo do Olimpo</span>
                                 <p class="text-xs text-slate-100 font-cinzel font-semibold leading-snug drop-shadow">
@@ -797,16 +821,33 @@
                             </div>
 
                             <div id="painel-online-amigos" class="hidden space-y-3 font-sans">
+                                <div class="space-y-1.5">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-[10px] font-cinzel font-bold text-emerald-300 tracking-wider uppercase">🟢 Jogadores Online (Servidor):</span>
+                                        <button type="button" onclick="carregarJogadoresOnline(); carregarConvitesRecebidosOnline();" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-lg cursor-pointer">🔄 Atualizar</button>
+                                    </div>
+                                    <div id="container-jogadores-online" class="bg-slate-950 border border-slate-800 rounded-xl p-2 max-h-28 overflow-y-auto space-y-1 text-xs">
+                                        <p class="text-slate-500 text-center py-1.5">Nenhum outro jogador conectado no momento.</p>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-1.5">
+                                    <span class="text-[10px] font-cinzel font-bold text-cyan-300 block tracking-wider uppercase">📨 Convites de Sala Recebidos:</span>
+                                    <div id="container-convites-recebidos" class="bg-slate-950 border border-slate-800 rounded-xl p-2 max-h-28 overflow-y-auto space-y-1 text-xs">
+                                        <p class="text-slate-500 text-center py-1">Nenhum convite pendente.</p>
+                                    </div>
+                                </div>
+
                                 <div class="flex gap-2">
                                     <input id="input-nick-amigo" type="text" placeholder="Nickname do Amigo (ex: Nárnia)" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500" />
                                     <button type="button" onclick="enviarSolicitacaoAmizade()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-cinzel font-bold text-xs px-3 py-2 rounded-xl cursor-pointer">
-                                        📩 Enviar Solicitação
+                                        📩 Adicionar Amigo
                                     </button>
                                 </div>
 
                                 <div class="space-y-1.5">
                                     <span class="text-[10px] font-cinzel font-bold text-slate-400 block tracking-wider uppercase">SUA LISTA DE AMIGOS E SOLICITAÇÕES:</span>
-                                    <div id="container-lista-amigos-fotos" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 max-h-32 overflow-y-auto space-y-1.5 text-xs">
+                                    <div id="container-lista-amigos-fotos" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 max-h-28 overflow-y-auto space-y-1.5 text-xs">
                                     </div>
                                 </div>
                             </div>
@@ -858,7 +899,7 @@
             <!-- RODAPÉ DISCRETO DA TELA INICIAL -->
             <footer class="w-full max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-400/80 font-cinzel border-t border-amber-500/10 relative z-20 gap-2">
                 <div>
-                    Legado dos Imortais © 2026 · Edição Lendária
+                    Legado dos Imortais © 2026 · Panteão dos Deuses
                 </div>
                 <div class="flex items-center gap-3">
                     <button type="button" onclick="abrirModalRegras()" class="hover:text-amber-300 transition-colors cursor-pointer">Códice de Regras</button>
@@ -877,7 +918,7 @@
             <div class="flex items-center justify-between border-b border-amber-500/30 pb-2">
                 <span class="text-xs font-cinzel text-amber-400 font-bold">🏛️ MODO CLÁSSICO ORIGINAL</span>
                 <button type="button" onclick="alternarVisualLobby('cinematic')" class="bg-amber-500 hover:bg-amber-400 text-slate-950 text-[10px] font-cinzel font-bold px-2.5 py-1 rounded-lg cursor-pointer">
-                    ⚡ Retornar ao Visual Lendário
+                    ⚡ Retornar ao Visual Cinematográfico
                 </button>
             </div>
             <h2 class="text-xl sm:text-2xl font-cinzel font-black text-amber-400 tracking-wider">LEGADO DOS IMORTAIS</h2>
@@ -960,7 +1001,7 @@
     <!-- TELA DE CARREGAMENTO TEMÁTICA MITOLÓGICA (PRÉ-PARTIDA) -->
     <div id="loading-screen-modal" class="hidden fixed inset-0 bg-slate-950 z-[10012] flex items-center justify-center p-4 select-none">
         <div class="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-            <img src="/assets/images/legado_dos_imortais_artwork.jpg" alt="Legado dos Imortais — Edição Lendária" class="w-full h-full object-cover object-center opacity-30 scale-105" />
+            <img src="/assets/images/legado_dos_imortais_artwork.jpg" alt="Legado dos Imortais" class="w-full h-full object-cover object-center opacity-30 scale-105" />
             <div class="absolute inset-0 bg-gradient-to-b from-slate-950/90 via-slate-950/75 to-slate-950"></div>
         </div>
         <div class="relative z-10 max-w-md w-full bg-slate-900/95 border-2 border-amber-500/80 rounded-3xl p-6 text-center shadow-[0_0_60px_rgba(251,191,36,0.3)] space-y-4">
@@ -1213,11 +1254,13 @@
         </div>
     </div>
 
-    <!-- MODAL DO ORÁCULO DE DELFOS -->
+    <!-- MODAL DO ORÁCULO / BARALHO DO TABULEIRO -->
     <div id="oraculo-modal" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[10001] flex items-center justify-center p-4">
         <div class="bg-slate-900 border-2 border-cyan-500 rounded-2xl max-w-sm w-full p-5 text-center shadow-2xl space-y-3">
             <div class="text-4xl animate-bounce">🔮</div>
-            <h3 class="text-lg font-cinzel font-black text-cyan-400">PROFECIA DE DELFOS</h3>
+            <h3 class="text-lg font-cinzel font-black text-cyan-400">PROFECIA &amp; CARTA DO DESTINO</h3>
+            <span id="oraculo-group-badge" class="hidden inline-block px-2.5 py-0.5 rounded-full text-[10px] font-cinzel font-bold border"></span>
+            <img id="oraculo-card-img" src="" alt="Carta do Destino" class="hidden w-24 h-24 mx-auto rounded-xl object-cover border border-cyan-500/40 shadow-md" />
             <p id="oraculo-title" class="text-sm font-bold font-cinzel text-amber-300">Revelando seu destino...</p>
             <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-300 min-h-[50px] flex items-center justify-center">
                 <p id="oraculo-desc">Os deuses do Olimpo estão decidindo seu destino...</p>
@@ -1666,14 +1709,20 @@
             </div>
 
             <!-- Abas do Ranking -->
-            <div class="grid grid-cols-3 gap-2">
-                <button type="button" id="ranking-tab-btn-global" onclick="trocarAbaRanking('global')" class="py-2 text-[11px] sm:text-xs font-cinzel font-bold rounded-xl border border-amber-400 bg-amber-500/20 text-amber-300 cursor-pointer transition-all">
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+                <button type="button" id="ranking-tab-btn-global" onclick="trocarAbaRanking('global')" class="py-2 text-[11px] font-cinzel font-bold rounded-xl border border-amber-400 bg-amber-500/20 text-amber-300 cursor-pointer transition-all">
                     🌐 Global
                 </button>
-                <button type="button" id="ranking-tab-btn-friends" onclick="trocarAbaRanking('friends')" class="py-2 text-[11px] sm:text-xs font-cinzel font-bold rounded-xl border border-slate-800 bg-slate-950 text-slate-400 cursor-pointer transition-all">
+                <button type="button" id="ranking-tab-btn-friends" onclick="trocarAbaRanking('friends')" class="py-2 text-[11px] font-cinzel font-bold rounded-xl border border-slate-800 bg-slate-950 text-slate-400 cursor-pointer transition-all">
                     👥 Amigos
                 </button>
-                <button type="button" id="ranking-tab-btn-profile" onclick="trocarAbaRanking('profile')" class="py-2 text-[11px] sm:text-xs font-cinzel font-bold rounded-xl border border-slate-800 bg-slate-950 text-slate-400 cursor-pointer transition-all">
+                <button type="button" id="ranking-tab-btn-wealth" onclick="trocarAbaRanking('wealth')" class="py-2 text-[11px] font-cinzel font-bold rounded-xl border border-slate-800 bg-slate-950 text-slate-400 cursor-pointer transition-all">
+                    🪙 Mais Ricos
+                </button>
+                <button type="button" id="ranking-tab-btn-creators" onclick="trocarAbaRanking('creators')" class="py-2 text-[11px] font-cinzel font-bold rounded-xl border border-slate-800 bg-slate-950 text-slate-400 cursor-pointer transition-all">
+                    🗺️ Criadores
+                </button>
+                <button type="button" id="ranking-tab-btn-profile" onclick="trocarAbaRanking('profile')" class="py-2 text-[11px] font-cinzel font-bold rounded-xl border border-slate-800 bg-slate-950 text-slate-400 cursor-pointer transition-all col-span-2 sm:col-span-1">
                     📊 Meu Perfil
                 </button>
             </div>
@@ -1707,6 +1756,28 @@
                     <div id="ranking-friends-privacy-note" class="text-[10px] text-slate-400 px-1"></div>
                     <div id="ranking-friends-list" class="space-y-1.5 text-xs">
                         <p class="text-slate-500 text-center py-6">Carregando ranking entre amigos...</p>
+                    </div>
+                </div>
+
+                <!-- ABA MAIS RICOS -->
+                <div id="ranking-tab-wealth" class="hidden space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] text-slate-400 font-cinzel">Economia verificada (🪙 Moedas + 💎 Coroas + Ganhos)</span>
+                        <button type="button" onclick="carregarDadosRanking('wealth')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-[10px] font-bold px-2.5 py-1 rounded-lg cursor-pointer">🔄 Atualizar</button>
+                    </div>
+                    <div id="ranking-wealth-list" class="space-y-1.5 text-xs">
+                        <p class="text-slate-500 text-center py-6">Carregando ranking econômico...</p>
+                    </div>
+                </div>
+
+                <!-- ABA CRIADORES DE TABULEIROS -->
+                <div id="ranking-tab-creators" class="hidden space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] text-slate-400 font-cinzel">Criadores mais bem avaliados na Galeria Moderada</span>
+                        <button type="button" onclick="carregarDadosRanking('creators')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-[10px] font-bold px-2.5 py-1 rounded-lg cursor-pointer">🔄 Atualizar</button>
+                    </div>
+                    <div id="ranking-creators-list" class="space-y-1.5 text-xs">
+                        <p class="text-slate-500 text-center py-6">Carregando ranking de criadores...</p>
                     </div>
                 </div>
 
@@ -1993,6 +2064,14 @@
                             <input id="oficina-char-nome" type="text" maxlength="24" value="Meu Campeão 3D" placeholder="Nome do personagem" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-amber-200 focus:outline-none focus:border-amber-400" />
                         </div>
 
+                        <div class="bg-slate-900/90 border border-red-500/30 rounded-xl p-2 space-y-1.5">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-[10px] font-cinzel font-bold text-red-300">🕯️ Personagens Temáticos (Sobrenatural &amp; Caçadores)</span>
+                                <span class="text-[9px] text-slate-400">Clique para carregar no Criador 3D</span>
+                            </div>
+                            <div id="oficina-thematic-chars-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-1.5"></div>
+                        </div>
+
                         <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
                             <label class="space-y-0.5"><span class="text-[10px] text-slate-400 block">Silhueta:</span><select id="char-silhueta" onchange="atualizarCriadorPersonagem3D()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-slate-200"></select></label>
                             <label class="space-y-0.5"><span class="text-[10px] text-slate-400 block">Formato Rosto:</span><select id="char-rosto" onchange="atualizarCriadorPersonagem3D()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-slate-200"></select></label>
@@ -2224,6 +2303,28 @@
                         <div id="bc-tiles-editor" class="space-y-1.5 max-h-52 overflow-y-auto pr-1 text-[11px]"></div>
                     </div>
 
+                    <details class="bg-slate-900/75 border border-slate-800 rounded-xl p-2.5 space-y-2">
+                        <summary class="cursor-pointer font-cinzel font-bold text-cyan-300 text-xs select-none flex items-center justify-between">
+                            <span>🃏 Baralho do Tabuleiro (Cartas de Sorte &amp; Maldições)</span>
+                            <span id="bc-deck-count-badge" class="text-[10px] font-mono text-amber-300">0 cartas</span>
+                        </summary>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 text-[11px]">
+                            <label class="space-y-0.5">
+                                <span class="text-[10px] text-emerald-300 block">Grupo Positivo (ex: Bênçãos):</span>
+                                <input id="bc-deck-pos-name" type="text" maxlength="32" oninput="editarDeckCampoCreator('positiveGroupName', this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-slate-200" />
+                            </label>
+                            <label class="space-y-0.5">
+                                <span class="text-[10px] text-red-300 block">Grupo Negativo (ex: Maldições):</span>
+                                <input id="bc-deck-neg-name" type="text" maxlength="32" oninput="editarDeckCampoCreator('negativeGroupName', this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-slate-200" />
+                            </label>
+                        </div>
+                        <div class="flex flex-wrap items-center justify-between gap-1.5 pt-1">
+                            <button type="button" onclick="adicionarCartaDeckCreator()" class="bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-400/50 text-cyan-200 text-[10px] font-bold px-2.5 py-1 rounded-lg cursor-pointer">+ Adicionar Carta</button>
+                            <button type="button" onclick="resetarDeckTemaCreator()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] px-2.5 py-1 rounded-lg cursor-pointer">↺ Resetar Baralho do Tema</button>
+                        </div>
+                        <div id="bc-cards-editor" class="space-y-1.5 max-h-48 overflow-y-auto pr-1 text-[11px]"></div>
+                    </details>
+
                     <p id="bc-validation-msg" class="text-[11px] min-h-[1rem] text-emerald-400"></p>
 
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -2370,22 +2471,49 @@
                         <button type="button" onclick="entrarContaJogador()" class="bg-purple-600 hover:bg-purple-500 text-white font-cinzel font-bold py-2 rounded-xl cursor-pointer">🔑 Entrar</button>
                         <button type="button" onclick="registrarContaJogador()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-cinzel font-black py-2 rounded-xl cursor-pointer">✨ Criar Conta</button>
                     </div>
-                    <p id="acc-auth-feedback" class="text-[11px] text-slate-400">Entre ou crie uma conta para salvar moedas semanais, cosméticos e publicar tabuleiros.</p>
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <p id="acc-auth-feedback" class="text-[11px] text-slate-400">Entre ou crie uma conta para salvar moedas semanais, cosméticos e publicar tabuleiros.</p>
+                        <button type="button" onclick="alternarBoxRecuperacaoLogin()" class="text-[11px] text-cyan-300 hover:text-cyan-200 underline cursor-pointer">🔑 Esqueci a senha (Chave de Recuperação)</button>
+                    </div>
+                    <div id="acc-recovery-reset-box" class="hidden bg-slate-900/95 border border-cyan-500/40 rounded-xl p-2.5 space-y-2">
+                        <strong class="text-[11px] font-cinzel text-cyan-300 block">Redefinir Senha com Chave Pessoal de Recuperação</strong>
+                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                            <input id="rec-reset-user" type="text" maxlength="20" placeholder="Seu usuário" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-amber-200" />
+                            <input id="rec-reset-key" type="password" maxlength="64" placeholder="Sua Chave de Recuperação" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200" />
+                            <input id="rec-reset-newpass" type="password" maxlength="72" placeholder="Nova senha (mín. 6)" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200" />
+                            <button type="button" onclick="redefinirSenhaComChaveRecuperacao()" class="bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-cinzel font-bold rounded-lg px-3 py-1.5 cursor-pointer">🔓 Redefinir</button>
+                        </div>
+                        <p id="acc-recovery-feedback" class="text-[10px] text-slate-400"></p>
+                    </div>
                 </div>
-                <div id="account-logged-in-box" class="hidden flex flex-wrap items-center justify-between gap-2">
-                    <div class="flex items-center gap-3">
-                        <span class="text-2xl">🛡️</span>
-                        <div>
-                            <strong id="acc-profile-name" class="text-sm font-cinzel text-amber-300 block">Guerreiro</strong>
-                            <span id="acc-profile-tier" class="text-[10px] text-slate-400">Plano Grátis • Sem Pay-to-Win</span>
+                <div id="account-logged-in-box" class="hidden space-y-2">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">🛡️</span>
+                            <div>
+                                <strong id="acc-profile-name" class="text-sm font-cinzel text-amber-300 block">Guerreiro</strong>
+                                <span id="acc-profile-tier" class="text-[10px] text-slate-400">Plano Grátis • Sem Pay-to-Win</span>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <div class="bg-slate-900 border border-amber-500/40 rounded-xl px-3 py-1.5 text-right">
+                                <span class="text-[9px] text-slate-400 block uppercase">Moedas (Jogo)</span>
+                                <strong id="acc-profile-coins" class="text-sm font-mono text-amber-300">0 🪙</strong>
+                            </div>
+                            <div class="bg-slate-900 border border-cyan-500/40 rounded-xl px-3 py-1.5 text-right">
+                                <span class="text-[9px] text-slate-400 block uppercase">Coroas (Loja)</span>
+                                <strong id="acc-profile-paid-coins" class="text-sm font-mono text-cyan-300">0 💎</strong>
+                            </div>
+                            <button type="button" onclick="sairContaJogador()" class="bg-red-900/50 hover:bg-red-800/70 border border-red-500/40 text-red-200 text-[11px] font-bold px-3 py-1.5 rounded-xl cursor-pointer">Sair</button>
                         </div>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <div class="bg-slate-900 border border-amber-500/40 rounded-xl px-3 py-1.5 text-right">
-                            <span class="text-[9px] text-slate-400 block uppercase">Saldo de Moedas</span>
-                            <strong id="acc-profile-coins" class="text-sm font-mono text-amber-300">0 🪙</strong>
-                        </div>
-                        <button type="button" onclick="sairContaJogador()" class="bg-red-900/50 hover:bg-red-800/70 border border-red-500/40 text-red-200 text-[11px] font-bold px-3 py-1.5 rounded-xl cursor-pointer">Sair</button>
+                    <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-900/80 border border-slate-800 rounded-xl px-2.5 py-1.5 text-[11px]">
+                        <span id="acc-recovery-status" class="text-slate-300">🔒 Chave de Recuperação: Não configurada</span>
+                        <button id="acc-recovery-setup-toggle" type="button" onclick="alternarBoxConfigRecuperacao()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-300 px-2.5 py-1 rounded-lg font-bold text-[10px] cursor-pointer">Configurar Chave</button>
+                    </div>
+                    <div id="acc-recovery-setup-box" class="hidden bg-slate-900 border border-cyan-500/40 rounded-xl p-2.5 flex flex-col sm:flex-row gap-2 items-center">
+                        <input id="acc-recovery-key-setup" type="password" maxlength="64" placeholder="Crie sua Chave de Recuperação secreta (mín. 8 caracteres)" class="flex-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200" />
+                        <button type="button" onclick="configurarChaveRecuperacao()" class="bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-cinzel font-bold text-xs px-3 py-1.5 rounded-lg cursor-pointer shrink-0">💾 Salvar Chave</button>
                     </div>
                 </div>
             </div>
@@ -2411,11 +2539,20 @@
                     <span id="daily-claim-feedback" class="text-[11px] text-slate-300">Entre na sua conta para coletar sua recompensa diária.</span>
                     <button id="btn-claim-daily" type="button" onclick="coletarRecompensaDiaria()" class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-cinzel font-black px-4 py-2 rounded-xl cursor-pointer">🎁 Coletar Hoje</button>
                 </div>
+                <div class="border-t border-slate-800 pt-2.5 space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <strong class="text-[11px] font-cinzel text-cyan-300">📜 Extrato Auditável de Moedas &amp; Coroas</strong>
+                        <button type="button" onclick="carregarExtratoEconomia()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] px-2 py-0.5 rounded-lg cursor-pointer">🔄 Atualizar</button>
+                    </div>
+                    <div id="acc-transactions-list" class="space-y-1 max-h-36 overflow-y-auto pr-1 text-[11px]">
+                        <p class="text-slate-500">Entre na sua conta para consultar o extrato auditável de partidas e compras.</p>
+                    </div>
+                </div>
             </div>
 
             <!-- ABA 2: LOJA COSMÉTICA -->
             <div id="painel-acc-shop" class="hidden space-y-2.5 bg-slate-950/80 border border-slate-800 rounded-2xl p-4 text-xs">
-                <p class="text-[11px] text-slate-300">Desbloqueios estritamente visuais comprados com moedas ganhas no jogo. Zero bônus de poder ou vantagem injusta em partida.</p>
+                <p class="text-[11px] text-slate-300">Desbloqueios estritamente visuais comprados com Moedas (🪙) ganhas no jogo ou Coroas (💎). Zero bônus de poder ou vantagem injusta em partida.</p>
                 <div id="cosmetic-shop-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-72 overflow-y-auto pr-1"></div>
             </div>
 
@@ -2434,6 +2571,9 @@
 
             <!-- ABA 4: MATRIZ GRÁTIS VS PREMIUM -->
             <div id="painel-acc-plan" class="hidden space-y-2.5 bg-slate-950/80 border border-slate-800 rounded-2xl p-4 text-xs">
+                <div id="entitlements-subscription-status" class="bg-slate-900 border border-slate-800 rounded-xl p-3 space-y-2">
+                    <p class="text-[11px] text-slate-400">Carregando status da assinatura...</p>
+                </div>
                 <div id="entitlements-matrix-grid" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
             </div>
         </div>
@@ -2720,6 +2860,7 @@
                 }
                 slotsContainer.innerHTML = rows.join('');
             }
+            if (typeof atualizarEstadoBotoesIniciarLobby === 'function') atualizarEstadoBotoesIniciarLobby();
         }
 
         async function sincronizarEstadoSalaWS(snap, ev) {
@@ -2734,6 +2875,9 @@
                     aplicarTabuleiroPersonalizadoNaArena(snap.customBoardMeta, false);
                 } else if (!snap.customBoardMeta && activeCustomBoardConfig) {
                     aplicarTabuleiroPersonalizadoNaArena(null, false);
+                }
+                if (typeof iniciarSessaoPartidaRanking === 'function') {
+                    iniciarSessaoPartidaRanking();
                 }
                 document.getElementById('lobby-modal')?.classList.add('hidden');
                 document.getElementById('loading-screen-modal')?.classList.add('hidden');
@@ -2773,6 +2917,7 @@
                 const diceBox = document.getElementById('dice-box');
                 if (diceBox) diceBox.textContent = ev.dice;
                 if (typeof tocarSomDadoFixado === 'function') tocarSomDadoFixado();
+                if (typeof registrarTurnoRanking === 'function') registrarTurnoRanking();
                 reagirPersonagem3D(ev.playerId, 'surpresa', 1000);
             }
 
@@ -2839,6 +2984,30 @@
                         pendingOracleState = snap.pendingOracle;
                         document.getElementById('oraculo-title').textContent = snap.pendingOracle.titulo;
                         document.getElementById('oraculo-desc').textContent = snap.pendingOracle.desc;
+                        const cardImgEl = document.getElementById('oraculo-card-img');
+                        if (cardImgEl) {
+                            if (snap.pendingOracle.imagemDataUrl) {
+                                cardImgEl.src = snap.pendingOracle.imagemDataUrl;
+                                cardImgEl.classList.remove('hidden');
+                            } else {
+                                cardImgEl.src = '';
+                                cardImgEl.classList.add('hidden');
+                            }
+                        }
+                        const badgeEl = document.getElementById('oraculo-group-badge');
+                        if (badgeEl) {
+                            const deckMeta = activeCustomBoardConfig?.cardDeck;
+                            const isMal = snap.pendingOracle.tipo === 'maldicao';
+                            const grpTxt = snap.pendingOracle.groupName || (deckMeta ? (isMal ? deckMeta.negativeGroupName : deckMeta.positiveGroupName) : '');
+                            if (grpTxt) {
+                                badgeEl.textContent = grpTxt;
+                                badgeEl.className = isMal
+                                    ? 'inline-block px-2.5 py-0.5 rounded-full text-[10px] font-cinzel font-bold border border-red-500/60 bg-red-950/70 text-red-200'
+                                    : 'inline-block px-2.5 py-0.5 rounded-full text-[10px] font-cinzel font-bold border border-emerald-500/60 bg-emerald-950/70 text-emerald-200';
+                            } else {
+                                badgeEl.className = 'hidden';
+                            }
+                        }
                         document.getElementById('oraculo-modal')?.classList.remove('hidden');
                     }
                 }
@@ -3270,6 +3439,8 @@
                 if (codeDisp) codeDisp.textContent = codigoSalaGlobal;
                 renderizarParticipantesSalaWs(data.snapshot);
                 conectarWebSocketSalaOnline();
+                enviarHeartbeatPresencaOnline();
+                atualizarEstadoBotoesIniciarLobby();
                 renderizarSalasPublicasFotos();
                 mostrarFeedbackSalaOnline(`🏰 Sala ${codigoSalaGlobal} criada (${isPriv ? 'Privada' : 'Pública'})! Compartilhe o código e aguarde outro jogador entrar.`, 'success');
                 adicionarHistorico(`🏰 Sala WebSocket <strong>${escapeHTML(codigoSalaGlobal)}</strong> criada no servidor! Compartilhe o código.`);
@@ -3329,6 +3500,8 @@
                 `;
             }
             renderizarSalasPublicasFotos();
+            enviarHeartbeatPresencaOnline();
+            atualizarEstadoBotoesIniciarLobby();
             mostrarFeedbackSalaOnline('📕 Você saiu da sala online.', 'info');
             adicionarHistorico('📕 Você saiu da sala online.');
         }
@@ -3386,6 +3559,8 @@
                 if (codeDisp) codeDisp.textContent = codigoSalaGlobal;
                 renderizarParticipantesSalaWs(data.snapshot);
                 conectarWebSocketSalaOnline();
+                enviarHeartbeatPresencaOnline();
+                atualizarEstadoBotoesIniciarLobby();
                 mostrarFeedbackSalaOnline(`🔗 Conectado à sala ${codigoSalaGlobal}! Aguardando o anfitrião iniciar a partida.`, 'success');
                 adicionarHistorico(`🔗 Conectado à sala autoritativa <strong>${escapeHTML(codigoSalaGlobal)}</strong>! Aguardando anfitrião iniciar.`);
             } catch {
@@ -3440,8 +3615,14 @@
             if (inp) inp.value = '';
         }
 
-        function convidarAmigoDireto(nomeAmigo) {
-            if (codigoSalaGlobal === '---') executarCriarSalaAgora();
+        async function convidarAmigoDireto(nomeAmigo) {
+            if (!wsRoomSession.roomCode && codigoSalaGlobal === '---') {
+                await executarCriarSalaAgora();
+            }
+            if (wsRoomSession.roomCode) {
+                await convidarJogadorOnline(nomeAmigo);
+                return;
+            }
             const meuNick = localStorage.getItem('mitologico_nickname') || 'Guerreiro';
             const targetPeerId = 'LEGADO_PLAYER_' + nomeAmigo.replace(/\s+/g, '_').toUpperCase();
             if (peer) {
@@ -3453,6 +3634,218 @@
                 });
             }
         }
+
+        // ---------- PRESENÇA GLOBAL, CONVITES DIRETOS & BOTÃO ANFITRIÃO VS CONVIDADO ----------
+        let globalPresenceWs = null;
+        let globalPresenceReconnectTimer = null;
+
+        function atualizarEstadoBotoesIniciarLobby() {
+            const modo = window.modoJogo || modoJogo || 'ai';
+            const btns = [document.getElementById('btn-start-lobby'), document.getElementById('btn-start-lobby-classic')].filter(Boolean);
+            btns.forEach((btn) => {
+                const isMain = btn.id === 'btn-start-lobby';
+                if (modo !== 'online') {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    btn.innerHTML = isMain
+                        ? '<span>⚡</span><span>INICIAR PARTIDA MITOLÓGICA</span><span>⚡</span>'
+                        : '⚡ INICIAR PARTIDA MITOLÓGICA';
+                    return;
+                }
+                if (!wsRoomSession.roomCode || !wsRoomSession.snapshot) {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    btn.textContent = '🌐 CRIE OU ENTRE EM UMA SALA ACIMA';
+                    return;
+                }
+                const isHost = wsRoomSession.playerId === wsRoomSession.snapshot.hostPlayerId;
+                const count = wsRoomSession.snapshot.players?.length || 0;
+                if (!isHost) {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    btn.textContent = '⏳ AGUARDANDO ANFITRIÃO INICIAR...';
+                } else if (count < 2) {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    btn.textContent = `👥 AGUARDANDO JOGADOR (${count}/${wsRoomSession.snapshot.maxPlayers || 2})`;
+                } else {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    btn.innerHTML = isMain
+                        ? '<span>⚡</span><span>INICIAR PARTIDA ONLINE</span><span>⚡</span>'
+                        : '⚡ INICIAR PARTIDA ONLINE';
+                }
+            });
+        }
+        window.atualizarEstadoBotoesIniciarLobby = atualizarEstadoBotoesIniciarLobby;
+
+        async function enviarHeartbeatPresencaOnline() {
+            const nick = (localStorage.getItem('mitologico_nickname') || '').trim();
+            if (nick.length < 2) return;
+            try {
+                await fetch(resolveApiUrl('/api/multiplayer/presence'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nickname: nick,
+                        roomCode: wsRoomSession.roomCode || null
+                    })
+                });
+            } catch {}
+        }
+        window.enviarHeartbeatPresencaOnline = enviarHeartbeatPresencaOnline;
+
+        function conectarPresencaGlobalWS() {
+            const nick = (localStorage.getItem('mitologico_nickname') || '').trim();
+            if (nick.length < 2) return;
+            if (globalPresenceWs && (globalPresenceWs.readyState === WebSocket.OPEN || globalPresenceWs.readyState === WebSocket.CONNECTING)) {
+                return;
+            }
+            try {
+                const ws = new WebSocket(resolveWsUrl());
+                globalPresenceWs = ws;
+                ws.onopen = () => {
+                    ws.send(JSON.stringify({
+                        type: 'PRESENCE_AUTH',
+                        nickname: nick,
+                        roomCode: wsRoomSession.roomCode || null
+                    }));
+                };
+                ws.onmessage = (ev) => {
+                    try {
+                        const msg = JSON.parse(ev.data);
+                        if (msg.type === 'INVITE_RECEIVED' && msg.invite) {
+                            mostrarFeedbackSalaOnline(`📨 Convite recebido de ${msg.invite.fromNickname} para a sala ${msg.invite.roomName} (${msg.invite.roomCode})! Confira na aba Amigos.`, 'info');
+                            carregarConvitesRecebidosOnline();
+                        } else if (msg.type === 'INVITE_UPDATED' && msg.invite) {
+                            const act = msg.invite.status === 'accepted' ? 'aceitou' : 'recusou';
+                            mostrarFeedbackSalaOnline(`📩 ${msg.invite.toNickname} ${act} seu convite para ${msg.invite.roomCode}.`, msg.invite.status === 'accepted' ? 'success' : 'info');
+                        }
+                    } catch {}
+                };
+                ws.onclose = () => {
+                    globalPresenceWs = null;
+                    clearTimeout(globalPresenceReconnectTimer);
+                    globalPresenceReconnectTimer = setTimeout(conectarPresencaGlobalWS, 5000);
+                };
+            } catch {}
+        }
+        window.conectarPresencaGlobalWS = conectarPresencaGlobalWS;
+
+        async function carregarJogadoresOnline() {
+            const box = document.getElementById('container-jogadores-online');
+            if (!box) return;
+            const nick = (localStorage.getItem('mitologico_nickname') || '').trim();
+            try {
+                const res = await fetch(resolveApiUrl(`/api/multiplayer/online?self=${encodeURIComponent(nick)}`));
+                const data = await res.json();
+                const list = data.players || [];
+                if (!list.length) {
+                    box.innerHTML = '<p class="text-slate-500 text-center py-1.5">Nenhum outro jogador online no momento.</p>';
+                    return;
+                }
+                box.innerHTML = list.map((p) => {
+                    const statusLbl = p.status === 'in_match' ? 'Em Partida' : p.status === 'in_room' ? `Sala ${escapeHTML(p.roomCode || '')}` : 'Online';
+                    const encNick = encodeURIComponent(p.nickname);
+                    return `
+                        <div class="flex items-center justify-between bg-slate-900 border border-slate-800 p-1.5 rounded-lg">
+                            <div class="min-w-0">
+                                <strong class="text-emerald-300 truncate block">🟢 ${escapeHTML(p.nickname)}</strong>
+                                <span class="text-[9px] text-slate-400">${statusLbl}</span>
+                            </div>
+                            <button type="button" onclick="convidarJogadorOnline(decodeURIComponent('${encNick}'))" class="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold px-2.5 py-1 rounded cursor-pointer shrink-0">📨 Convidar</button>
+                        </div>
+                    `;
+                }).join('');
+            } catch {
+                box.innerHTML = '<p class="text-red-400 text-center py-1">Erro ao listar jogadores online.</p>';
+            }
+        }
+        window.carregarJogadoresOnline = carregarJogadoresOnline;
+
+        async function convidarJogadorOnline(destNick) {
+            const nick = (localStorage.getItem('mitologico_nickname') || 'Guerreiro').trim();
+            if (!wsRoomSession.roomCode) {
+                await executarCriarSalaAgora();
+            }
+            if (!wsRoomSession.roomCode) {
+                mostrarFeedbackSalaOnline('Crie uma sala online antes de enviar um convite.', 'error');
+                return;
+            }
+            try {
+                const res = await fetch(resolveApiUrl('/api/multiplayer/invites'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fromNickname: nick,
+                        toNickname: destNick,
+                        roomCode: wsRoomSession.roomCode
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    mostrarFeedbackSalaOnline(`⚠️ ${data.error || 'Erro ao enviar convite.'}`, 'error');
+                    return;
+                }
+                mostrarFeedbackSalaOnline(`📨 Convite enviado para ${destNick} (Sala ${wsRoomSession.roomCode})!`, 'success');
+            } catch {
+                mostrarFeedbackSalaOnline('❌ Falha ao enviar convite para o servidor.', 'error');
+            }
+        }
+        window.convidarJogadorOnline = convidarJogadorOnline;
+
+        async function carregarConvitesRecebidosOnline() {
+            const box = document.getElementById('container-convites-recebidos');
+            if (!box) return;
+            const nick = (localStorage.getItem('mitologico_nickname') || '').trim();
+            if (!nick) return;
+            try {
+                const res = await fetch(resolveApiUrl(`/api/multiplayer/invites?nickname=${encodeURIComponent(nick)}`));
+                const data = await res.json();
+                const incoming = data.incoming || [];
+                if (!incoming.length) {
+                    box.innerHTML = '<p class="text-slate-500 text-center py-1">Nenhum convite pendente.</p>';
+                    return;
+                }
+                box.innerHTML = incoming.map((inv) => `
+                    <div class="flex items-center justify-between gap-2 bg-slate-900 border border-cyan-500/40 p-1.5 rounded-lg">
+                        <div class="min-w-0">
+                            <strong class="text-cyan-300 block truncate">${escapeHTML(inv.fromNickname)} convidou você</strong>
+                            <span class="text-[9px] text-slate-400">Sala: ${escapeHTML(inv.roomName)} (${escapeHTML(inv.roomCode)})</span>
+                        </div>
+                        <div class="flex gap-1 shrink-0">
+                            <button type="button" onclick="responderConviteSala('${escapeHTML(inv.id)}', true)" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-[10px] px-2 py-1 rounded cursor-pointer">Aceitar</button>
+                            <button type="button" onclick="responderConviteSala('${escapeHTML(inv.id)}', false)" class="bg-slate-800 hover:bg-red-800 text-slate-300 text-[10px] px-2 py-1 rounded cursor-pointer">Recusar</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch {}
+        }
+        window.carregarConvitesRecebidosOnline = carregarConvitesRecebidosOnline;
+
+        async function responderConviteSala(inviteId, accept) {
+            const nick = (localStorage.getItem('mitologico_nickname') || '').trim();
+            try {
+                const res = await fetch(resolveApiUrl(`/api/multiplayer/invites/${encodeURIComponent(inviteId)}/respond`), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nickname: nick,
+                        action: accept ? 'accept' : 'decline'
+                    })
+                });
+                const data = await res.json();
+                await carregarConvitesRecebidosOnline();
+                if (!res.ok) {
+                    mostrarFeedbackSalaOnline(`⚠️ ${data.error || 'Convite expirado ou indisponível.'}`, 'error');
+                    return;
+                }
+                if (accept && data.roomCode) {
+                    await entrarNaSalaWsPorCodigo(data.roomCode);
+                }
+            } catch {}
+        }
+        window.responderConviteSala = responderConviteSala;
 
         async function renderizarSalasPublicasFotos() {
             const container = document.getElementById('container-salas-publicas-fotos');
@@ -4719,18 +5112,78 @@
             const j = jogadores[turnoAtual];
             const bonusOraculo = (!partidaCompetitivaSimetrica && j.classeId === 'oraculo') ? 80 : 0;
             const penalidadeEstrategista = (!partidaCompetitivaSimetrica && j.classeId === 'estrategista') ? 25 : 0;
-            const profecias = [
-                { titulo: 'Bênção de Hermes ⚡', reacao: 'comemorar', efeito: () => { j.saldo += 400 + bonusOraculo; }, desc: `Os mensageiros divinos concederam velocidade e tesouro. Você recebe +$ ${400 + bonusOraculo}!` },
-                { titulo: 'Fúria de Ares ⚔️', reacao: 'frustracao', efeito: () => { j.saldo -= 250 + penalidadeEstrategista; }, desc: `Uma batalha nas fronteiras custou recursos sagrados. Pague $ ${250 + penalidadeEstrategista} aos templos.` },
-                { titulo: 'Sabedoria de Atena 🦉', reacao: 'comemorar', efeito: () => { j.imunidadeTaxa = true; }, desc: 'A deusa da estratégia lhe concede imunidade ao próximo aluguel!' },
-                { titulo: 'Tributo ao Olimpo 🏛️', reacao: 'comemorar', efeito: () => { j.saldo += 300 + bonusOraculo; }, desc: `Cada jogador no reino envia oferendas para homenagear sua glória. Receba +$ ${300 + bonusOraculo}!` },
-                { titulo: 'Mar Tempestuoso de Poseidon 🌊', reacao: 'surpresa', efeito: () => { j.pos = (j.pos + 2) % TABULEIRO_CASAS.length; if (typeof board3dStageCtrl !== 'undefined' && board3dStageCtrl && board3dStageCtrl.isActive()) { board3dStageCtrl.teleportPlayer(j.id, j.pos); } atualizarPosicoesPeoes(); }, desc: 'Uma onda colossal empurra seu peão 2 casas adiante!' }
-            ];
-            const sorteada = profecias[Math.floor(Math.random() * profecias.length)];
+
+            const customDeck = activeCustomBoardConfig?.cardDeck;
+            const customCards = Array.isArray(customDeck?.cards) ? customDeck.cards : [];
+            let sorteada = null;
+            let groupName = '';
+            let groupIsNegative = false;
+            let cardImgUrl = '';
+
+            if (customCards.length > 0) {
+                const weighted = [];
+                customCards.forEach((c) => {
+                    const qtd = Math.max(1, Math.min(6, Math.round(Number(c.quantidade) || 1)));
+                    for (let q = 0; q < qtd; q++) weighted.push(c);
+                });
+                const chosen = weighted[Math.floor(Math.random() * weighted.length)] || customCards[0];
+                groupIsNegative = chosen.tipo === 'maldicao';
+                groupName = groupIsNegative
+                    ? (customDeck.negativeGroupName || 'Maldições')
+                    : (customDeck.positiveGroupName || 'Bênçãos');
+                cardImgUrl = chosen.imagemDataUrl || '';
+
+                sorteada = {
+                    titulo: chosen.titulo,
+                    desc: chosen.descricao,
+                    reacao: groupIsNegative ? 'frustracao' : 'comemorar',
+                    efeito: () => {
+                        if (chosen.efeito === 'imunidade') {
+                            j.imunidadeTaxa = true;
+                        } else if (chosen.efeito === 'avancar_casas') {
+                            const steps = Math.max(1, Math.min(6, Math.abs(Math.round(Number(chosen.valor) || 2))));
+                            j.pos = (j.pos + steps) % TABULEIRO_CASAS.length;
+                            if (typeof board3dStageCtrl !== 'undefined' && board3dStageCtrl && board3dStageCtrl.isActive()) {
+                                board3dStageCtrl.teleportPlayer(j.id, j.pos);
+                            }
+                            atualizarPosicoesPeoes();
+                        } else if (chosen.efeito === 'ir_prisao') {
+                            const prisonIdx = obterIndiceCasaPrisao();
+                            j.pos = prisonIdx;
+                            j.preso = true;
+                            j.turnosPreso = 0;
+                            if (typeof board3dStageCtrl !== 'undefined' && board3dStageCtrl && board3dStageCtrl.isActive()) {
+                                board3dStageCtrl.teleportPlayer(j.id, j.pos);
+                            }
+                            atualizarPosicoesPeoes();
+                        } else if (chosen.efeito === 'tributo') {
+                            const trib = Math.max(50, Math.abs(Math.round(Number(chosen.valor) || 200)));
+                            if (groupIsNegative) {
+                                j.saldo -= (trib + penalidadeEstrategista);
+                            } else {
+                                j.saldo += (trib + bonusOraculo);
+                            }
+                        } else {
+                            const raw = Math.round(Number(chosen.valor) || 0);
+                            j.saldo += raw >= 0 ? (raw + bonusOraculo) : (raw - penalidadeEstrategista);
+                        }
+                    }
+                };
+            } else {
+                const profecias = [
+                    { titulo: 'Bênção de Hermes ⚡', reacao: 'comemorar', efeito: () => { j.saldo += 400 + bonusOraculo; }, desc: `Os mensageiros divinos concederam velocidade e tesouro. Você recebe +$ ${400 + bonusOraculo}!` },
+                    { titulo: 'Fúria de Ares ⚔️', reacao: 'frustracao', efeito: () => { j.saldo -= 250 + penalidadeEstrategista; }, desc: `Uma batalha nas fronteiras custou recursos sagrados. Pague $ ${250 + penalidadeEstrategista} aos templos.` },
+                    { titulo: 'Sabedoria de Atena 🦉', reacao: 'comemorar', efeito: () => { j.imunidadeTaxa = true; }, desc: 'A deusa da estratégia lhe concede imunidade ao próximo aluguel!' },
+                    { titulo: 'Tributo ao Olimpo 🏛️', reacao: 'comemorar', efeito: () => { j.saldo += 300 + bonusOraculo; }, desc: `Cada jogador no reino envia oferendas para homenagear sua glória. Receba +$ ${300 + bonusOraculo}!` },
+                    { titulo: 'Mar Tempestuoso de Poseidon 🌊', reacao: 'surpresa', efeito: () => { j.pos = (j.pos + 2) % TABULEIRO_CASAS.length; if (typeof board3dStageCtrl !== 'undefined' && board3dStageCtrl && board3dStageCtrl.isActive()) { board3dStageCtrl.teleportPlayer(j.id, j.pos); } atualizarPosicoesPeoes(); }, desc: 'Uma onda colossal empurra seu peão 2 casas adiante!' }
+                ];
+                sorteada = profecias[Math.floor(Math.random() * profecias.length)];
+            }
+
             sorteada.efeito();
             reagirPersonagem3D(j.id, sorteada.reacao, 1200);
             if (typeof tocarSomAcao === 'function') tocarSomAcao('bencao');
-            adicionarHistorico(`🔮 Oráculo de Delfos: <strong>${sorteada.titulo}</strong> (${j.nome})`);
+            adicionarHistorico(`🔮 Carta do Tabuleiro: <strong>${escapeHTML(sorteada.titulo)}</strong> (${escapeHTML(j.nome)})`);
             renderizarPainelJogadores();
 
             if (j.saldo <= 0) {
@@ -4745,6 +5198,27 @@
                 return;
             }
 
+            const imgEl = document.getElementById('oraculo-card-img');
+            if (imgEl) {
+                if (cardImgUrl) {
+                    imgEl.src = cardImgUrl;
+                    imgEl.classList.remove('hidden');
+                } else {
+                    imgEl.src = '';
+                    imgEl.classList.add('hidden');
+                }
+            }
+            const badgeEl = document.getElementById('oraculo-group-badge');
+            if (badgeEl) {
+                if (groupName) {
+                    badgeEl.textContent = groupName;
+                    badgeEl.className = groupIsNegative
+                        ? 'inline-block px-2.5 py-0.5 rounded-full text-[10px] font-cinzel font-bold border border-red-500/60 bg-red-950/70 text-red-200'
+                        : 'inline-block px-2.5 py-0.5 rounded-full text-[10px] font-cinzel font-bold border border-emerald-500/60 bg-emerald-950/70 text-emerald-200';
+                } else {
+                    badgeEl.className = 'hidden';
+                }
+            }
             document.getElementById('oraculo-title').textContent = sorteada.titulo;
             document.getElementById('oraculo-desc').textContent = sorteada.desc;
             document.getElementById('oraculo-modal')?.classList.remove('hidden');
@@ -5959,7 +6433,10 @@
 
             salvarRegistroPartida(vencedor, souVencedor, 'completed');
             atualizarEstatisticasJogador(souVencedor, 'completed');
-            finalizarSessaoPartidaRanking('completed', vencedor);
+            (async () => {
+                await finalizarSessaoPartidaRanking('completed', vencedor);
+                await resgatarRecompensaPartidaServidor(souVencedor);
+            })();
         }
 
         function exibirTelaVitoria(vencedor) {
@@ -6184,6 +6661,32 @@
             } catch {}
         }
 
+        async function resgatarRecompensaPartidaServidor(won) {
+            const token = localStorage.getItem(PLAYER_TOKEN_STORAGE_KEY);
+            if (!token || !activeMatchSession?.matchId || !activeMatchSession?.matchToken) return;
+            try {
+                const res = await fetch(resolveApiUrl('/api/economy/match-reward'), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        matchId: activeMatchSession.matchId,
+                        matchToken: activeMatchSession.matchToken,
+                        won: Boolean(won),
+                        mode: activeMatchSession.mode || ((window.modoJogo || modoJogo) === 'online' ? 'online' : 'ai'),
+                        turnsPlayed: Math.max(1, activeMatchSession.turnsPlayed || 1)
+                    })
+                });
+                const data = await res.json();
+                if (res.ok && data.grantedCoins > 0) {
+                    adicionarHistorico(`🪙 Recompensa da partida creditada: <strong>+${data.grantedCoins} moedas</strong> (Saldo: ${data.coins} 🪙).`);
+                    if (typeof carregarSessaoContaJogador === 'function') carregarSessaoContaJogador().catch(() => {});
+                }
+            } catch {}
+        }
+
         function salvarRegistroPartida(vencedor, vitoriaLocal, status = 'completed') {
             try {
                 const historico = JSON.parse(localStorage.getItem('mitologico_historico_partidas') || '[]');
@@ -6336,13 +6839,13 @@
         window.fecharModalRanking = fecharModalRanking;
 
         function trocarAbaRanking(aba) {
-            ['global', 'friends', 'profile'].forEach(key => {
+            ['global', 'friends', 'wealth', 'creators', 'profile'].forEach(key => {
                 const btn = document.getElementById(`ranking-tab-btn-${key}`);
                 const panel = document.getElementById(`ranking-tab-${key}`);
                 if (btn) {
                     btn.className = key === aba
-                        ? 'py-2 text-[11px] sm:text-xs font-cinzel font-bold rounded-xl border border-amber-400 bg-amber-500/20 text-amber-300 cursor-pointer transition-all'
-                        : 'py-2 text-[11px] sm:text-xs font-cinzel font-bold rounded-xl border border-slate-800 bg-slate-950 text-slate-400 cursor-pointer transition-all';
+                        ? 'py-2 text-[11px] font-cinzel font-bold rounded-xl border border-amber-400 bg-amber-500/20 text-amber-300 cursor-pointer transition-all' + (key === 'profile' ? ' col-span-2 sm:col-span-1' : '')
+                        : 'py-2 text-[11px] font-cinzel font-bold rounded-xl border border-slate-800 bg-slate-950 text-slate-400 cursor-pointer transition-all' + (key === 'profile' ? ' col-span-2 sm:col-span-1' : '');
                 }
                 if (panel) panel.classList.toggle('hidden', key !== aba);
             });
@@ -6501,6 +7004,72 @@
                     }
                 } catch {
                     if (fEl) fEl.innerHTML = '<p class="text-amber-400 text-center py-4">Não foi possível consultar o ranking entre amigos agora.</p>';
+                }
+            }
+
+            if (abaAtiva === 'wealth') {
+                const wEl = document.getElementById('ranking-wealth-list');
+                try {
+                    const res = await fetch(resolveApiUrl('/api/ranking/wealth'));
+                    const data = await res.json();
+                    const list = data.leaderboard || [];
+                    if (wEl) {
+                        wEl.innerHTML = list.length === 0
+                            ? '<p class="text-slate-500 text-center py-6">Nenhuma conta com patrimônio registrado ainda.</p>'
+                            : list.map((r) => {
+                                const med = r.position === 1 ? '🥇' : r.position === 2 ? '🥈' : r.position === 3 ? '🥉' : `#${r.position}`;
+                                return `
+                                    <div class="flex items-center justify-between p-2.5 rounded-xl border bg-slate-950/90 border-slate-800">
+                                        <div class="flex items-center gap-2.5 min-w-0">
+                                            <span class="w-8 text-center font-cinzel font-black text-sm text-amber-300 shrink-0">${med}</span>
+                                            <div class="min-w-0">
+                                                <div class="font-cinzel font-bold text-slate-100 truncate">${escapeHTML(r.username)}</div>
+                                                <div class="text-[10px] text-slate-400">${r.cosmeticsCount || 0} cosmético(s) • Ganho em partidas: ${r.verifiedEarningsCoins || 0} 🪙</div>
+                                            </div>
+                                        </div>
+                                        <div class="text-right font-mono shrink-0">
+                                            <div class="text-amber-300 font-bold">${r.coins || 0} 🪙</div>
+                                            <div class="text-[10px] text-cyan-300">${r.paidCoins || 0} 💎</div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('');
+                    }
+                } catch {
+                    if (wEl) wEl.innerHTML = '<p class="text-amber-400 text-center py-4">Não foi possível carregar o ranking econômico.</p>';
+                }
+            }
+
+            if (abaAtiva === 'creators') {
+                const cEl = document.getElementById('ranking-creators-list');
+                try {
+                    const res = await fetch(resolveApiUrl('/api/ranking/creators'));
+                    const data = await res.json();
+                    const list = data.leaderboard || [];
+                    if (cEl) {
+                        cEl.innerHTML = list.length === 0
+                            ? '<p class="text-slate-500 text-center py-6">Nenhum criador publicou tabuleiros na galeria ainda.</p>'
+                            : list.map((r) => {
+                                const med = r.position === 1 ? '🥇' : r.position === 2 ? '🥈' : r.position === 3 ? '🥉' : `#${r.position}`;
+                                return `
+                                    <div class="flex items-center justify-between p-2.5 rounded-xl border bg-slate-950/90 border-slate-800">
+                                        <div class="flex items-center gap-2.5 min-w-0">
+                                            <span class="w-8 text-center font-cinzel font-black text-sm text-emerald-300 shrink-0">${med}</span>
+                                            <div class="min-w-0">
+                                                <div class="font-cinzel font-bold text-slate-100 truncate">${escapeHTML(r.authorUsername)}</div>
+                                                <div class="text-[10px] text-slate-400">${r.boardsCount || 0} tabuleiro(s) publicado(s)</div>
+                                            </div>
+                                        </div>
+                                        <div class="text-right font-mono shrink-0">
+                                            <div class="text-amber-300 font-bold">⭐ ${r.avgRating || 0}</div>
+                                            <div class="text-[10px] text-slate-400">${r.totalRatings || 0} avaliação(ões)</div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('');
+                    }
+                } catch {
+                    if (cEl) cEl.innerHTML = '<p class="text-amber-400 text-center py-4">Não foi possível carregar o ranking de criadores.</p>';
                 }
             }
         }
@@ -7493,6 +8062,7 @@
 
         async function selecionarEstiloVisualOficina3D(estilo) {
             oficinaEstiloAtual = estilo;
+            if (oficinaCharConfig) oficinaCharConfig.estiloVisual = estilo;
             const mod = window.Legado3D;
             const info = mod?.VISUAL_STYLE_CATALOG?.find(s => s.id === estilo);
             const descEl = document.getElementById('oficina-estilo-desc');
@@ -7655,6 +8225,48 @@
             await atualizarPreviewAtivoOficina();
         }
         window.selecionarPresetOficina3D = selecionarPresetOficina3D;
+
+        function renderizarPersonagensTematicos3D() {
+            const grid = document.getElementById('oficina-thematic-chars-grid');
+            const mod = window.Legado3D;
+            if (!grid || !mod || !Array.isArray(mod.THEMATIC_CHARACTER_CATALOG)) return;
+            grid.innerHTML = mod.THEMATIC_CHARACTER_CATALOG.map((preset) => `
+                <button type="button" onclick="selecionarPersonagemTematico3D('${escapeHTML(preset.id)}')" title="${escapeHTML(preset.descricao)}" class="text-left p-1.5 rounded-lg border border-slate-800 hover:border-red-400/70 bg-slate-950/90 hover:bg-red-950/20 transition-all cursor-pointer">
+                    <div class="flex items-center justify-between gap-1">
+                        <span class="text-sm">${preset.icone}</span>
+                        <span class="text-[8px] font-cinzel text-red-300 uppercase">${escapeHTML(preset.tema)}</span>
+                    </div>
+                    <strong class="text-[10px] font-cinzel text-amber-200 block truncate">${escapeHTML(preset.nome)}</strong>
+                </button>
+            `).join('');
+        }
+
+        async function selecionarPersonagemTematico3D(presetId, equiparDireto = false) {
+            const mod = window.Legado3D;
+            if (!mod || !Array.isArray(mod.THEMATIC_CHARACTER_CATALOG)) return;
+            const preset = mod.THEMATIC_CHARACTER_CATALOG.find(p => p.id === presetId);
+            if (!preset) return;
+            const estiloPreservado = oficinaEstiloAtual || 'stylized3d';
+            oficinaCharConfig = {
+                ...oficinaCharConfig,
+                ...JSON.parse(JSON.stringify(preset.config)),
+                estiloVisual: estiloPreservado,
+                slotsArmadura: { ...(oficinaCharConfig.slotsArmadura || {}), ...(preset.config.slotsArmadura || {}) }
+            };
+            oficinaCoresPorRegiao = {
+                ...(mod.DEFAULT_REGION_COLORS || {}),
+                ...(preset.config.coresPorRegiao || {})
+            };
+            const nomeInp = document.getElementById('oficina-char-nome');
+            if (nomeInp) nomeInp.value = preset.nome;
+            aplicarConfigNoFormularioCriador3D(oficinaCharConfig);
+            renderizarControlesRegioesOficina3D();
+            await atualizarPreviewAtivoOficina();
+            if (equiparDireto) {
+                await salvarEEquiparPersonagem3D(true);
+            }
+        }
+        window.selecionarPersonagemTematico3D = selecionarPersonagemTematico3D;
 
         async function aplicarTemaBasePresetOficina(corHex) {
             const mod = window.Legado3D;
@@ -8366,6 +8978,7 @@
 
             popularSelectoresCriador3D();
             renderizarCatalogoPresets3D();
+            renderizarPersonagensTematicos3D();
             atualizarLabelSlotOficina3D();
             await renderizarBiblioteca3D();
             await renderizarVestimentasSalvas3D();
@@ -8427,8 +9040,8 @@
         const PLAYER_TOKEN_STORAGE_KEY = 'mitologico_player_token';
         const ACTIVE_BOARD_STORAGE_KEY = 'legado_active_board_id';
         const ACTIVE_DICE_STORAGE_KEY = 'legado_active_dice_id';
-        const CLIENT_WEB_VERSION = '2.1.0';
-        const CLIENT_ANDROID_VERSION_CODE = 1;
+        const CLIENT_WEB_VERSION = '2.2.0';
+        const CLIENT_ANDROID_VERSION_CODE = 2;
 
         let CLASSIC_BOARD_TILES_HTML = null;
         let boardCreatorDraft = null;
@@ -8630,11 +9243,11 @@
                         (casa.imagemDataUrl ? `<img id="sq-custom-img-${i}" class="sq-custom-img" alt="${escapeHTML(casa.nome)}" src="${escapeHTML(casa.imagemDataUrl)}" />` : '') +
                         `<div class="sq-bg-icon">${escapeHTML(casa.icon || '🏛️')}</div>` +
                         (isProp ? `<div id="owner-badge-${i}" class="absolute top-0.5 right-0.5 text-[8px] font-extrabold px-1 py-0.2 rounded z-20 hidden shadow-md"></div><div id="level-${i}" class="absolute top-0.5 left-0.5 text-[8px] z-20"></div>` : '') +
-                        `<span class="text-[6px] sm:text-[7px] font-cinzel font-bold z-10" style="color:${escapeHTML(cfg.corDestaque || '#fbbf24')}">${tagText}</span>` +
+                        `<span class="text-[6px] sm:text-[7px] font-cinzel font-bold z-10 ${casa.imagemDataUrl ? 'sq-custom-title-backdrop' : ''}" style="color:${escapeHTML(cfg.corDestaque || '#fbbf24')}">${tagText}</span>` +
                         (isProp && casa.grupo ? `<span class="sq-group-pill">${escapeHTML(casa.grupo)}</span>` : '') +
-                        `<span class="${txtSize} font-bold font-cinzel text-slate-100 z-10 leading-tight line-clamp-2">${escapeHTML(casa.nome)}</span>` +
+                        `<span class="${txtSize} font-bold font-cinzel text-slate-100 z-10 leading-tight line-clamp-2 ${casa.imagemDataUrl ? 'sq-custom-title-backdrop' : ''}">${escapeHTML(casa.nome)}</span>` +
                         descPreview +
-                        `<span class="text-[6px] sm:text-[7px] font-mono text-amber-300 z-10">${footText}</span>` +
+                        `<span class="text-[6px] sm:text-[7px] font-mono text-amber-300 z-10 ${casa.imagemDataUrl ? 'sq-custom-title-backdrop' : ''}">${footText}</span>` +
                         `</div>`
                     );
                 }
@@ -8892,7 +9505,12 @@
             setVal('bc-spacing', boardCreatorDraft.espacamento || 'padrao');
             const chk = document.getElementById('bc-rounded');
             if (chk) chk.checked = boardCreatorDraft.bordaArredondada !== false;
+            const mod = window.Legado3D;
+            if (!boardCreatorDraft.cardDeck && mod?.createDefaultCardDeckForTheme) {
+                boardCreatorDraft.cardDeck = mod.createDefaultCardDeckForTheme(boardCreatorDraft.tema || 'mitologico');
+            }
             renderizarEditorCasasCreator();
+            renderizarEditorDeckCreator();
             validarDraftTabuleiroUI();
         }
 
@@ -8918,6 +9536,7 @@
                         </select>
                         <input type="number" min="400" max="5000" step="50" value="${c.tipo === 'propriedade' ? (c.valor || 600) : 0}" ${c.tipo !== 'propriedade' ? 'disabled' : ''} onchange="editarCasaCreator(${idx},'valor',this.value)" class="col-span-2 bg-slate-950 border border-slate-700 rounded px-1 py-0.5 text-amber-300 font-mono" />
                         <div class="col-span-2 flex items-center justify-end gap-1">
+                            ${hasImg ? `<img src="${escapeHTML(c.imagemDataUrl)}" alt="Min" class="w-4 h-4 rounded object-cover border border-amber-400/70 shrink-0" title="Imagem aplicada nesta casa" />` : ''}
                             <label title="Enviar imagem desta casa (exclusiva do tabuleiro personalizado)" class="bg-amber-500/20 hover:bg-amber-500/35 border border-amber-400/50 text-amber-300 px-1.5 py-0.5 rounded cursor-pointer text-[10px]">
                                 📷<input type="file" accept="image/png,image/jpeg,image/webp" onchange="carregarImagemCasaCreator(${idx}, event)" class="hidden" />
                             </label>
@@ -8929,6 +9548,137 @@
                 </div>`;
             }).join('');
         }
+
+        function ensureBoardCreatorDeck() {
+            if (!boardCreatorDraft) return null;
+            const mod = window.Legado3D;
+            if (!boardCreatorDraft.cardDeck) {
+                boardCreatorDraft.cardDeck = mod?.createDefaultCardDeckForTheme
+                    ? mod.createDefaultCardDeckForTheme(boardCreatorDraft.tema || 'mitologico')
+                    : { positiveGroupName: 'Bênçãos', negativeGroupName: 'Maldições', cards: [] };
+            }
+            if (!Array.isArray(boardCreatorDraft.cardDeck.cards)) {
+                boardCreatorDraft.cardDeck.cards = [];
+            }
+            return boardCreatorDraft.cardDeck;
+        }
+
+        function renderizarEditorDeckCreator() {
+            const box = document.getElementById('bc-cards-editor');
+            const deck = ensureBoardCreatorDeck();
+            if (!box || !deck) return;
+            const posInp = document.getElementById('bc-deck-pos-name');
+            const negInp = document.getElementById('bc-deck-neg-name');
+            if (posInp) posInp.value = deck.positiveGroupName || 'Bênçãos';
+            if (negInp) negInp.value = deck.negativeGroupName || 'Maldições';
+            const badge = document.getElementById('bc-deck-count-badge');
+            if (badge) badge.textContent = `${deck.cards.length} carta(s)`;
+
+            if (!deck.cards.length) {
+                box.innerHTML = '<p class="text-slate-500 text-center py-2">Nenhuma carta no baralho deste tabuleiro. Clique em "+ Adicionar Carta".</p>';
+                return;
+            }
+            box.innerHTML = deck.cards.map((c, idx) => `
+                <div class="bg-slate-950 border border-slate-800 rounded-lg p-2 space-y-1.5">
+                    <div class="grid grid-cols-12 gap-1 items-center">
+                        <input type="text" maxlength="40" value="${escapeHTML(c.titulo)}" oninput="editarCartaDeckCreator(${idx}, 'titulo', this.value)" placeholder="Título da carta" class="col-span-4 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-amber-200" />
+                        <select onchange="editarCartaDeckCreator(${idx}, 'tipo', this.value)" class="col-span-2 bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-slate-200">
+                            <option value="bencao" ${c.tipo === 'bencao' ? 'selected' : ''}>Positiva</option>
+                            <option value="maldicao" ${c.tipo === 'maldicao' ? 'selected' : ''}>Negativa</option>
+                        </select>
+                        <select onchange="editarCartaDeckCreator(${idx}, 'efeito', this.value)" class="col-span-3 bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-cyan-200">
+                            <option value="saldo_delta" ${c.efeito === 'saldo_delta' ? 'selected' : ''}>Saldo (+/- $)</option>
+                            <option value="imunidade" ${c.efeito === 'imunidade' ? 'selected' : ''}>Imunidade Taxa</option>
+                            <option value="avancar_casas" ${c.efeito === 'avancar_casas' ? 'selected' : ''}>Avançar Casas</option>
+                            <option value="ir_prisao" ${c.efeito === 'ir_prisao' ? 'selected' : ''}>Ir à Prisão</option>
+                            <option value="tributo" ${c.efeito === 'tributo' ? 'selected' : ''}>Tributo / Bônus</option>
+                        </select>
+                        <input type="number" value="${Number(c.valor || 0)}" onchange="editarCartaDeckCreator(${idx}, 'valor', this.value)" title="Valor ou quantidade de casas" class="col-span-1 bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-amber-300 font-mono" />
+                        <input type="number" min="1" max="6" value="${Number(c.quantidade || 1)}" onchange="editarCartaDeckCreator(${idx}, 'quantidade', this.value)" title="Cópias no baralho (1 a 6)" class="col-span-1 bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-emerald-300 font-mono" />
+                        <div class="col-span-1 flex items-center justify-end gap-1">
+                            <label title="Imagem opcional da carta" class="bg-amber-500/20 text-amber-300 px-1 py-0.5 rounded cursor-pointer">📷<input type="file" accept="image/png,image/jpeg,image/webp" onchange="carregarImagemCartaDeckCreator(${idx}, event)" class="hidden" /></label>
+                            <button type="button" onclick="removerCartaDeckCreator(${idx})" title="Remover carta" class="text-red-400 hover:text-red-200 px-1 cursor-pointer">✕</button>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        ${c.imagemDataUrl ? `<img src="${escapeHTML(c.imagemDataUrl)}" alt="Carta" class="w-5 h-5 rounded object-cover border border-cyan-500/50 shrink-0" /><button type="button" onclick="removerImagemCartaDeckCreator(${idx})" class="text-[9px] text-red-300 cursor-pointer shrink-0">🗑️</button>` : ''}
+                        <input type="text" maxlength="140" value="${escapeHTML(c.descricao || '')}" oninput="editarCartaDeckCreator(${idx}, 'descricao', this.value)" placeholder="Texto exibido ao sortear esta carta..." class="flex-1 bg-slate-900/90 border border-slate-800 rounded px-1.5 py-0.5 text-[10px] text-slate-300" />
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function editarDeckCampoCreator(campo, val) {
+            const deck = ensureBoardCreatorDeck();
+            if (!deck) return;
+            deck[campo] = String(val || '').substring(0, 32);
+        }
+        window.editarDeckCampoCreator = editarDeckCampoCreator;
+
+        function editarCartaDeckCreator(idx, campo, val) {
+            const deck = ensureBoardCreatorDeck();
+            if (!deck || !deck.cards[idx]) return;
+            const c = deck.cards[idx];
+            if (campo === 'titulo') c.titulo = String(val || '').substring(0, 40);
+            else if (campo === 'descricao') c.descricao = String(val || '').substring(0, 140);
+            else if (campo === 'tipo') c.tipo = val === 'maldicao' ? 'maldicao' : 'bencao';
+            else if (campo === 'efeito') c.efeito = val;
+            else if (campo === 'valor') c.valor = Math.round(Number(val) || 0);
+            else if (campo === 'quantidade') c.quantidade = Math.max(1, Math.min(6, Math.round(Number(val) || 1)));
+        }
+        window.editarCartaDeckCreator = editarCartaDeckCreator;
+
+        async function carregarImagemCartaDeckCreator(idx, event) {
+            const file = event?.target?.files?.[0];
+            const deck = ensureBoardCreatorDeck();
+            if (!file || !deck || !deck.cards[idx]) return;
+            try {
+                const raw = await lerArquivoComoDataUrl(file);
+                deck.cards[idx].imagemDataUrl = await otimizarImagemCanvas(raw, 180, 180, 0.72);
+                renderizarEditorDeckCreator();
+            } catch {}
+        }
+        window.carregarImagemCartaDeckCreator = carregarImagemCartaDeckCreator;
+
+        function removerImagemCartaDeckCreator(idx) {
+            const deck = ensureBoardCreatorDeck();
+            if (!deck || !deck.cards[idx]) return;
+            delete deck.cards[idx].imagemDataUrl;
+            renderizarEditorDeckCreator();
+        }
+        window.removerImagemCartaDeckCreator = removerImagemCartaDeckCreator;
+
+        function adicionarCartaDeckCreator() {
+            const deck = ensureBoardCreatorDeck();
+            if (!deck || deck.cards.length >= 24) return;
+            deck.cards.push({
+                id: `card_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
+                titulo: 'Nova Carta do Destino',
+                descricao: 'Um acontecimento especial altera sua jornada (+$250).',
+                tipo: 'bencao',
+                efeito: 'saldo_delta',
+                valor: 250,
+                quantidade: 1
+            });
+            renderizarEditorDeckCreator();
+        }
+        window.adicionarCartaDeckCreator = adicionarCartaDeckCreator;
+
+        function removerCartaDeckCreator(idx) {
+            const deck = ensureBoardCreatorDeck();
+            if (!deck || deck.cards.length <= 1) return;
+            deck.cards.splice(idx, 1);
+            renderizarEditorDeckCreator();
+        }
+        window.removerCartaDeckCreator = removerCartaDeckCreator;
+
+        function resetarDeckTemaCreator() {
+            const mod = window.Legado3D;
+            if (!mod || !boardCreatorDraft || !mod.createDefaultCardDeckForTheme) return;
+            boardCreatorDraft.cardDeck = mod.createDefaultCardDeckForTheme(boardCreatorDraft.tema || 'mitologico');
+            renderizarEditorDeckCreator();
+        }
+        window.resetarDeckTemaCreator = resetarDeckTemaCreator;
 
         function adicionarCasaCreatorTabuleiro() {
             const mod = window.Legado3D;
@@ -9041,10 +9791,15 @@
             if (!mod) return;
             const parsed = Number(gridVal);
             const n = [3, 4, 5, 6, 7].includes(parsed) ? parsed : 4;
-            const tema = document.getElementById('bc-tema')?.value || boardCreatorDraft?.tema || 'mitologico';
-            const nome = document.getElementById('bc-nome')?.value?.trim();
-            boardCreatorDraft = mod.createBoardFromThemePreset(tema, n, nome || undefined);
-            boardCreatorDraft.customThemeName = document.getElementById('bc-custom-theme-name')?.value?.trim() || '';
+            if (boardCreatorDraft && typeof mod.resizeCustomBoardTiles === 'function') {
+                boardCreatorDraft = mod.resizeCustomBoardTiles(boardCreatorDraft, n);
+            } else {
+                const tema = document.getElementById('bc-tema')?.value || boardCreatorDraft?.tema || 'mitologico';
+                const nome = document.getElementById('bc-nome')?.value?.trim();
+                boardCreatorDraft = mod.createBoardFromThemePreset(tema, n, nome || undefined);
+            }
+            boardCreatorDraft.nome = document.getElementById('bc-nome')?.value?.trim() || boardCreatorDraft.nome;
+            boardCreatorDraft.customThemeName = document.getElementById('bc-custom-theme-name')?.value?.trim() || boardCreatorDraft.customThemeName || '';
             boardCreatorDraft.corPrimaria = document.getElementById('bc-c1')?.value || boardCreatorDraft.corPrimaria;
             boardCreatorDraft.corSecundaria = document.getElementById('bc-c2')?.value || boardCreatorDraft.corSecundaria;
             boardCreatorDraft.corFundo = document.getElementById('bc-c3')?.value || boardCreatorDraft.corFundo;
@@ -9564,7 +10319,18 @@
                 const tr = document.getElementById('acc-profile-tier');
                 if (tr) tr.textContent = currentPlayerAccount.isPremium ? 'Plano Premium • Sem Pay-to-Win' : 'Plano Grátis • Sem Pay-to-Win';
                 const cn = document.getElementById('acc-profile-coins');
-                if (cn) cn.textContent = `${currentPlayerAccount.coins} 🪙`;
+                if (cn) cn.textContent = `${currentPlayerAccount.coins || 0} 🪙`;
+                const pcn = document.getElementById('acc-profile-paid-coins');
+                if (pcn) pcn.textContent = `${currentPlayerAccount.paidCoins || 0} 💎`;
+                const recSt = document.getElementById('acc-recovery-status');
+                if (recSt) {
+                    recSt.textContent = currentPlayerAccount.hasRecoveryKey
+                        ? '🔑 Chave de Recuperação: Configurada nesta conta'
+                        : '🔒 Chave de Recuperação: Não configurada';
+                    recSt.className = currentPlayerAccount.hasRecoveryKey ? 'text-emerald-400' : 'text-amber-300';
+                }
+                const recTog = document.getElementById('acc-recovery-setup-toggle');
+                if (recTog) recTog.textContent = currentPlayerAccount.hasRecoveryKey ? 'Alterar Chave' : 'Configurar Chave';
             } else {
                 loggedOutBox?.classList.remove('hidden');
                 loggedInBox?.classList.add('hidden');
@@ -9572,11 +10338,108 @@
 
             await Promise.all([
                 atualizarPainelRecompensaDiaria(),
+                carregarExtratoEconomia(),
                 carregarLojaCosmetica(),
                 carregarPoliticaAnunciosEConquistas(),
                 carregarMatrizPlanos()
             ]);
         }
+
+        function alternarBoxRecuperacaoLogin() {
+            document.getElementById('acc-recovery-reset-box')?.classList.toggle('hidden');
+        }
+        window.alternarBoxRecuperacaoLogin = alternarBoxRecuperacaoLogin;
+
+        function alternarBoxConfigRecuperacao() {
+            document.getElementById('acc-recovery-setup-box')?.classList.toggle('hidden');
+        }
+        window.alternarBoxConfigRecuperacao = alternarBoxConfigRecuperacao;
+
+        async function configurarChaveRecuperacao() {
+            const token = localStorage.getItem(PLAYER_TOKEN_STORAGE_KEY);
+            const inp = document.getElementById('acc-recovery-key-setup');
+            const key = inp?.value || '';
+            const stEl = document.getElementById('acc-recovery-status');
+            if (!token) return;
+            try {
+                const res = await fetch(resolveApiUrl('/api/player/recovery/setup'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ recoveryKey: key })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    if (stEl) { stEl.textContent = `⚠️ ${data.error || 'Erro ao salvar chave.'}`; stEl.className = 'text-red-400'; }
+                    return;
+                }
+                if (inp) inp.value = '';
+                document.getElementById('acc-recovery-setup-box')?.classList.add('hidden');
+                if (stEl) { stEl.textContent = '✅ Chave de Recuperação salva com segurança!'; stEl.className = 'text-emerald-400'; }
+                await carregarSessaoContaJogador();
+            } catch {}
+        }
+        window.configurarChaveRecuperacao = configurarChaveRecuperacao;
+
+        async function redefinirSenhaComChaveRecuperacao() {
+            const username = document.getElementById('rec-reset-user')?.value?.trim() || '';
+            const recoveryKey = document.getElementById('rec-reset-key')?.value || '';
+            const newPassword = document.getElementById('rec-reset-newpass')?.value || '';
+            const fb = document.getElementById('acc-recovery-feedback');
+            try {
+                const res = await fetch(resolveApiUrl('/api/player/recovery/reset'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, recoveryKey, newPassword })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    if (fb) { fb.textContent = `⚠️ ${data.error || 'Falha na recuperação.'}`; fb.className = 'text-[10px] text-red-400'; }
+                    return;
+                }
+                if (fb) { fb.textContent = `✅ ${data.message || 'Senha redefinida! Entre com sua nova senha.'}`; fb.className = 'text-[10px] text-emerald-400'; }
+                const uInp = document.getElementById('acc-username');
+                if (uInp) uInp.value = username;
+            } catch {
+                if (fb) { fb.textContent = '⚠️ Servidor indisponível.'; fb.className = 'text-[10px] text-red-400'; }
+            }
+        }
+        window.redefinirSenhaComChaveRecuperacao = redefinirSenhaComChaveRecuperacao;
+
+        async function carregarExtratoEconomia() {
+            const box = document.getElementById('acc-transactions-list');
+            if (!box) return;
+            const token = localStorage.getItem(PLAYER_TOKEN_STORAGE_KEY);
+            if (!token) {
+                box.innerHTML = '<p class="text-slate-500">Entre na sua conta para consultar o extrato auditável.</p>';
+                return;
+            }
+            try {
+                const res = await fetch(resolveApiUrl('/api/economy/transactions'), {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = await res.json();
+                const list = data.transactions || [];
+                if (!res.ok || list.length === 0) {
+                    box.innerHTML = '<p class="text-slate-500">Nenhuma movimentação registrada ainda.</p>';
+                    return;
+                }
+                box.innerHTML = list.slice(0, 15).map((tx) => {
+                    const iconCur = tx.currency === 'paidCoins' ? '💎' : '🪙';
+                    const dt = tx.timestamp ? new Date(tx.timestamp).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+                    const sign = tx.amount >= 0 ? '+' : '';
+                    return `
+                        <div class="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-lg px-2 py-1">
+                            <div class="min-w-0">
+                                <span class="text-slate-200 block truncate">${escapeHTML(tx.description || tx.kind)}</span>
+                                <span class="text-[9px] text-slate-500">${escapeHTML(dt)}</span>
+                            </div>
+                            <strong class="font-mono shrink-0 ${tx.amount >= 0 ? 'text-emerald-400' : 'text-red-400'}">${sign}${tx.amount} ${iconCur}</strong>
+                        </div>
+                    `;
+                }).join('');
+            } catch {}
+        }
+        window.carregarExtratoEconomia = carregarExtratoEconomia;
 
         async function entrarContaJogador() {
             const username = document.getElementById('acc-username')?.value?.trim() || '';
@@ -9705,29 +10568,35 @@
                 const owned = currentPlayerAccount?.unlockedCosmetics || [];
                 grid.innerHTML = cosmeticShopItemsCache.map(item => {
                     const has = owned.includes(item.id);
+                    const pPaid = item.pricePaidCoins || Math.max(5, Math.round((item.priceCoins || 60) / 3));
                     return `<div class="bg-slate-900 border ${has ? 'border-emerald-500/60' : 'border-slate-800'} rounded-xl p-3 flex flex-col justify-between gap-2">
                         <div>
                             <div class="flex items-center justify-between gap-2">
                                 <strong class="text-amber-200 font-cinzel">${escapeHTML(item.icon)} ${escapeHTML(item.nome)}</strong>
-                                <span class="text-[10px] font-mono text-amber-400">${item.priceCoins} 🪙</span>
+                                <span class="text-[10px] font-mono text-amber-400">${item.priceCoins} 🪙 / ${pPaid} 💎</span>
                             </div>
                             <p class="text-[11px] text-slate-400 mt-1">${escapeHTML(item.descricao)}</p>
                         </div>
-                        <button type="button" ${has ? 'disabled' : ''} onclick="comprarCosmeticoLoja('${escapeHTML(item.id)}')" class="${has ? 'bg-emerald-900/50 text-emerald-300 cursor-default' : 'bg-purple-600 hover:bg-purple-500 text-white cursor-pointer'} font-bold py-1.5 rounded-lg text-[11px]">
-                            ${has ? '✅ Desbloqueado' : `🛒 Desbloquear (${item.priceCoins} 🪙)`}
-                        </button>
+                        ${has ? `
+                            <div class="bg-emerald-900/50 text-emerald-300 text-center font-bold py-1.5 rounded-lg text-[11px]">✅ Desbloqueado</div>
+                        ` : `
+                            <div class="grid grid-cols-2 gap-1.5">
+                                <button type="button" onclick="comprarCosmeticoLoja('${escapeHTML(item.id)}', 'coins')" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-1.5 rounded-lg text-[10px] cursor-pointer">🪙 ${item.priceCoins} Moedas</button>
+                                <button type="button" onclick="comprarCosmeticoLoja('${escapeHTML(item.id)}', 'paidCoins')" class="bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold py-1.5 rounded-lg text-[10px] cursor-pointer">💎 ${pPaid} Coroas</button>
+                            </div>
+                        `}
                     </div>`;
                 }).join('');
             } catch {}
         }
 
-        async function comprarCosmeticoLoja(itemId) {
+        async function comprarCosmeticoLoja(itemId, currency = 'coins') {
             const token = localStorage.getItem(PLAYER_TOKEN_STORAGE_KEY);
             if (!token) { alert('Entre na sua conta para comprar cosméticos.'); return; }
             const res = await fetch(resolveApiUrl('/api/economy/shop/purchase'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ itemId, idempotencyKey: `ui_${itemId}_${Date.now()}` })
+                body: JSON.stringify({ itemId, currency, idempotencyKey: `ui_${itemId}_${currency}_${Date.now()}` })
             });
             const data = await res.json();
             if (!res.ok) {
@@ -9778,6 +10647,37 @@
 
         async function carregarMatrizPlanos() {
             const grid = document.getElementById('entitlements-matrix-grid');
+            const statusEl = document.getElementById('entitlements-subscription-status');
+            if (statusEl) {
+                const token = localStorage.getItem(PLAYER_TOKEN_STORAGE_KEY);
+                if (!token) {
+                    statusEl.innerHTML = `<div class="flex flex-wrap items-center justify-between gap-2">
+                        <div><strong class="text-amber-300 font-cinzel block">Assinatura da Conta</strong><span class="text-[11px] text-slate-400">Entre na sua conta para gerenciar assinatura, cancelamento ou renovação.</span></div>
+                    </div>`;
+                } else {
+                    try {
+                        const stRes = await fetch(resolveApiUrl('/api/entitlements/status'), {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        const st = await stRes.json();
+                        const labelPlan = st.isPremium ? '👑 Premium Ativo' : '🆓 Plano Gratuito';
+                        const statusTxt = st.subscriptionStatus || 'free';
+                        statusEl.innerHTML = `
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div>
+                                    <strong class="text-amber-300 font-cinzel block">${labelPlan} (${escapeHTML(statusTxt)})</strong>
+                                    <span class="text-[10px] text-slate-400">${escapeHTML(st.billingNotice || '')}</span>
+                                </div>
+                                <div class="flex gap-1.5">
+                                    ${st.isPremium && statusTxt === 'active' ? `<button type="button" onclick="cancelarAssinaturaPremium()" class="bg-red-900/70 hover:bg-red-800 text-red-200 text-[10px] font-bold px-2.5 py-1 rounded-lg cursor-pointer">Cancelar Renovação</button>` : ''}
+                                    <button type="button" onclick="renovarAssinaturaPremium()" class="bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg cursor-pointer">✨ Assinar / Renovar</button>
+                                </div>
+                            </div>
+                            <p id="entitlements-action-feedback" class="text-[10px] text-cyan-300 hidden"></p>
+                        `;
+                    } catch {}
+                }
+            }
             if (!grid) return;
             try {
                 const res = await fetch(resolveApiUrl('/api/entitlements/catalog'));
@@ -9795,6 +10695,43 @@
                     <p class="text-[10px] text-slate-400">${escapeHTML(data.note || '')}</p>`;
             } catch {}
         }
+
+        async function cancelarAssinaturaPremium() {
+            const token = localStorage.getItem(PLAYER_TOKEN_STORAGE_KEY);
+            const fb = document.getElementById('entitlements-action-feedback');
+            if (!token) return;
+            try {
+                const res = await fetch(resolveApiUrl('/api/entitlements/subscription/cancel'), {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (fb) {
+                    fb.classList.remove('hidden');
+                    fb.textContent = data.message || data.error || 'Solicitação processada.';
+                }
+                await carregarSessaoContaJogador();
+            } catch {}
+        }
+        window.cancelarAssinaturaPremium = cancelarAssinaturaPremium;
+
+        async function renovarAssinaturaPremium() {
+            const token = localStorage.getItem(PLAYER_TOKEN_STORAGE_KEY);
+            const fb = document.getElementById('entitlements-action-feedback');
+            if (!token) { alert('Entre na sua conta primeiro.'); return; }
+            try {
+                const res = await fetch(resolveApiUrl('/api/entitlements/subscription/renew'), {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (fb) {
+                    fb.classList.remove('hidden');
+                    fb.textContent = `ℹ️ ${data.error || data.message || 'Provedor de pagamento ainda não conectado neste ambiente.'}`;
+                }
+            } catch {}
+        }
+        window.renovarAssinaturaPremium = renovarAssinaturaPremium;
 
         // ---------- VERIFICAÇÃO DISCRETA DE ATUALIZAÇÃO (/api/app-version) ----------
         async function verificarAtualizacaoDisponivel() {
@@ -9890,6 +10827,9 @@
             setAdminShieldVisibility(false);
             atualizarVisibilidadePainelAdmin(false).catch(() => {});
             iniciarObservadorFirebase().catch(() => {});
+            atualizarEstadoBotoesIniciarLobby();
+            conectarPresencaGlobalWS();
+            setInterval(() => { enviarHeartbeatPresencaOnline(); }, 25000);
         });
 
         let cloudBoardsUnsubscribe = null;

@@ -54,7 +54,10 @@ import {
 } from './classes';
 import {
   BOARD_THEME_CATALOG,
+  BOARD_CARD_DECK_PRESETS,
   createBoardFromThemePreset,
+  createDefaultCardDeckForTheme,
+  resizeCustomBoardTiles,
   validateCustomBoardConfig,
   computeFlexibleBoardGrid,
   addTileToCustomBoard,
@@ -72,7 +75,7 @@ import {
 import { LegadoFirebase } from './firebase';
 
 export type PieceKind = 'preset' | 'glb' | 'character' | 'photo-totem';
-export type PresetPieceId = 'spartan' | 'owl' | 'lion' | 'wolf' | 'pegasus' | 'dragon';
+export type PresetPieceId = 'spartan' | 'owl' | 'lion' | 'wolf' | 'pegasus' | 'dragon' | 'impala_1967';
 
 export interface CustomPieceRecord {
   id: string;
@@ -157,6 +160,251 @@ export const PRESET_CATALOG: PresetCatalogItem[] = [
     descricao: 'Crista dorsal segmentada, chifres duplos, asas abertas e cauda esculpida.',
     corPadrao: '#10b981',
     icone: '🐉'
+  },
+  {
+    id: 'impala_1967',
+    nome: 'Chevrolet Impala 1967',
+    categoria: 'Veículo Lendário',
+    descricao: 'Clássico muscle car preto metálico dos caçadores, com cromados, faróis e rodas giratórias.',
+    corPadrao: '#09090b',
+    icone: '🚗'
+  }
+];
+
+export interface ThematicCharacterPreset {
+  id: string;
+  nome: string;
+  tema: string;
+  icone: string;
+  descricao: string;
+  corHex: string;
+  config: CharacterConfig;
+}
+
+export const THEMATIC_CHARACTER_CATALOG: ThematicCharacterPreset[] = [
+  {
+    id: 'dean_winchester',
+    nome: 'Dean Winchester',
+    tema: 'Sobrenatural',
+    icone: '🧥',
+    descricao: 'Caçador clássico com jaqueta de couro marrom, cabelo curto e olhar determinado.',
+    corHex: '#78350f',
+    config: {
+      ...DEFAULT_CHARACTER_CONFIG,
+      estiloVisual: 'stylized3d',
+      silhueta: 'heroico',
+      rosto: 'quadrado',
+      cabelo: 'curto_espetado',
+      barba: 'barba_por_fazer',
+      roupa: 'jaqueta_moderna',
+      calca: 'calca_reta',
+      armadura: 'sem_armadura',
+      calcado: 'botas_couro',
+      colar: 'medalhao',
+      acessorio: 'nenhum',
+      expressao: 'confiante',
+      animacao: 'idle',
+      padraoRoupa: 'leather',
+      padraoCalca: 'solid',
+      slotsArmadura: { crown: false, choker: false, pauldrons: false, bracers: false },
+      coresPorRegiao: {
+        pele: '#eab68c',
+        cabelo: '#4a3525',
+        mecha: '#785a3a',
+        roupa: '#78350f',
+        calca: '#1e3a8a',
+        calcado: '#3b2313',
+        detalhes: '#f59e0b',
+        acessorios: '#d97706'
+      }
+    }
+  },
+  {
+    id: 'sam_winchester',
+    nome: 'Sam Winchester',
+    tema: 'Sobrenatural',
+    icone: '📖',
+    descricao: 'Pesquisador e caçador com cabelo longo, camisa xadrez e porte atlético.',
+    corHex: '#991b1b',
+    config: {
+      ...DEFAULT_CHARACTER_CONFIG,
+      estiloVisual: 'stylized3d',
+      silhueta: 'guardiao',
+      rosto: 'oval',
+      cabelo: 'longo_fluido',
+      barba: 'nenhuma',
+      roupa: 'jaqueta_moderna',
+      calca: 'calca_reta',
+      armadura: 'sem_armadura',
+      calcado: 'botas_couro',
+      colar: 'nenhum',
+      acessorio: 'nenhum',
+      expressao: 'serio',
+      animacao: 'idle',
+      alturaEscala: 1.08,
+      padraoRoupa: 'plaid',
+      padraoCalca: 'solid',
+      slotsArmadura: { crown: false, choker: false, pauldrons: false, bracers: false },
+      coresPorRegiao: {
+        pele: '#ecc09c',
+        cabelo: '#3b2416',
+        mecha: '#5c3a24',
+        roupa: '#991b1b',
+        calca: '#1e293b',
+        calcado: '#292524',
+        detalhes: '#cbd5e1'
+      }
+    }
+  },
+  {
+    id: 'castiel',
+    nome: 'Castiel',
+    tema: 'Sobrenatural',
+    icone: '🪽',
+    descricao: 'Anjo do Senhor com sobretudo bege, gravata azul e asas celestiais sombrias.',
+    corHex: '#1d4ed8',
+    config: {
+      ...DEFAULT_CHARACTER_CONFIG,
+      estiloVisual: 'stylized3d',
+      silhueta: 'heroico',
+      rosto: 'angular',
+      cabelo: 'curto_espetado',
+      barba: 'barba_por_fazer',
+      roupa: 'capa_real',
+      calca: 'calca_reta',
+      armadura: 'sem_armadura',
+      calcado: 'botas_couro',
+      colar: 'nenhum',
+      acessorio: 'asas_divinas',
+      expressao: 'serio',
+      animacao: 'idle',
+      padraoRoupa: 'solid',
+      padraoCalca: 'solid',
+      slotsArmadura: { crown: false, choker: false, pauldrons: false, bracers: false },
+      coresPorRegiao: {
+        pele: '#e9ba96',
+        cabelo: '#1c1917',
+        roupa: '#d6c7a9',
+        calca: '#1e293b',
+        asas: '#0f172a',
+        barriga: '#1d4ed8',
+        calcado: '#18181b',
+        detalhes: '#1d4ed8',
+        acessorios: '#38bdf8'
+      }
+    }
+  },
+  {
+    id: 'jack_kline',
+    nome: 'Jack Kline',
+    tema: 'Sobrenatural',
+    icone: '✨',
+    descricao: 'Nefilim da nova era com aura dourada, visual jovem casual e olhos luminosos.',
+    corHex: '#fbbf24',
+    config: {
+      ...DEFAULT_CHARACTER_CONFIG,
+      estiloVisual: 'stylized3d',
+      silhueta: 'agil',
+      rosto: 'suave',
+      cabelo: 'curto_ondulado',
+      barba: 'nenhuma',
+      roupa: 'camiseta_casual',
+      calca: 'calca_tatica',
+      armadura: 'sem_armadura',
+      calcado: 'tenis_casuais',
+      colar: 'nenhum',
+      acessorio: 'coroa_louros',
+      expressao: 'feliz',
+      animacao: 'idle',
+      padraoRoupa: 'solid',
+      padraoCalca: 'solid',
+      slotsArmadura: { crown: false, choker: false, pauldrons: false, bracers: false },
+      coresPorRegiao: {
+        pele: '#f0c5a5',
+        cabelo: '#5c4033',
+        roupa: '#334155',
+        calca: '#1e293b',
+        calcado: '#e2e8f0',
+        detalhes: '#fbbf24',
+        acessorios: '#fde047'
+      }
+    }
+  },
+  {
+    id: 'lucifer',
+    nome: 'Lúcifer',
+    tema: 'Sobrenatural',
+    icone: '🔥',
+    descricao: 'Arcanjo caído com manto imperial branco e carmesim, sorriso irônico e brilho escarlate.',
+    corHex: '#dc2626',
+    config: {
+      ...DEFAULT_CHARACTER_CONFIG,
+      estiloVisual: 'stylized3d',
+      silhueta: 'heroico',
+      rosto: 'angular',
+      cabelo: 'topete_real',
+      barba: 'nenhuma',
+      roupa: 'capa_real',
+      calca: 'calca_reta',
+      armadura: 'ouro_celestial',
+      calcado: 'botas_couro',
+      colar: 'medalhao',
+      acessorio: 'asas_divinas',
+      expressao: 'confiante',
+      animacao: 'idle',
+      padraoRoupa: 'striped',
+      padraoCalca: 'solid',
+      slotsArmadura: { crown: false, choker: false, pauldrons: true, bracers: false },
+      coresPorRegiao: {
+        pele: '#edd0b8',
+        cabelo: '#a16207',
+        roupa: '#f8fafc',
+        calca: '#0f172a',
+        asas: '#dc2626',
+        armadura: '#991b1b',
+        detalhes: '#ef4444',
+        acessorios: '#f87171',
+        calcado: '#09090b'
+      }
+    }
+  },
+  {
+    id: 'crowley',
+    nome: 'Crowley',
+    tema: 'Sobrenatural',
+    icone: '🥃',
+    descricao: 'Rei da Encruzilhada em terno escuro sob medida, barba aparada e detalhes rubi.',
+    corHex: '#991b1b',
+    config: {
+      ...DEFAULT_CHARACTER_CONFIG,
+      estiloVisual: 'stylized3d',
+      silhueta: 'guardiao',
+      rosto: 'quadrado',
+      cabelo: 'curto_espetado',
+      barba: 'barba_curta',
+      roupa: 'capa_real',
+      calca: 'calca_reta',
+      armadura: 'obsidiana',
+      calcado: 'botas_couro',
+      colar: 'cachecol',
+      acessorio: 'nenhum',
+      expressao: 'confiante',
+      animacao: 'idle',
+      padraoRoupa: 'striped',
+      padraoCalca: 'solid',
+      slotsArmadura: { crown: false, choker: false, pauldrons: false, bracers: false },
+      coresPorRegiao: {
+        pele: '#e8b896',
+        cabelo: '#292524',
+        roupa: '#09090b',
+        calca: '#18181b',
+        asas: '#450a0a',
+        barriga: '#991b1b',
+        detalhes: '#dc2626',
+        acessorios: '#ef4444',
+        calcado: '#09090b'
+      }
+    }
   }
 ];
 
@@ -323,6 +571,7 @@ export function buildPresetPieceModel(
   let rightLegPivot: THREE.Group | undefined;
   let leftArmPivot: THREE.Group | undefined;
   let rightArmPivot: THREE.Group | undefined;
+  const wheelPivots: THREE.Object3D[] = [];
 
   if (presetId === 'spartan') {
     const legL = new THREE.Group();
@@ -609,7 +858,7 @@ export function buildPresetPieceModel(
       if (dir === -1) leftWingPivot = wPivot;
       else rightWingPivot = wPivot;
     }
-  } else {
+  } else if (presetId !== 'impala_1967') {
     // Dragão de Delfos
     const body = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 0.64, segs), peitoralMat);
     body.position.set(0, 0.38, 0);
@@ -663,9 +912,135 @@ export function buildPresetPieceModel(
     tail.position.set(0, 0.20, -0.34);
     tagMeshRegion(tail, 'peitoral', 'leather');
     bodyPivot.add(tail);
+  } else {
+    // Chevrolet Impala 1967 (4-door hardtop muscle car procedural) — frente orientada em +Z
+    const calcadoMat = mk(mergedColors.calcado || '#1f2937', 0.85, 0.08);
+    const glassMat = new THREE.MeshStandardMaterial({
+      color: 0x0f172a,
+      roughness: 0.14,
+      metalness: 0.78
+    });
+    const headlightMat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(mergedColors.acessorios || '#fef08a'),
+      emissive: new THREE.Color(mergedColors.acessorios || '#facc15'),
+      emissiveIntensity: 0.85,
+      roughness: 0.18,
+      metalness: 0.2
+    });
+    const taillightMat = new THREE.MeshStandardMaterial({
+      color: 0xdc2626,
+      emissive: new THREE.Color(0xb91c1c),
+      emissiveIntensity: 0.75,
+      roughness: 0.25,
+      metalness: 0.15
+    });
+
+    // Lower body chassis
+    const lowerBody = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.25, 1.56), armaduraMat);
+    lowerBody.position.set(0, 0.24, 0);
+    tagMeshRegion(lowerBody, 'armadura', 'metal');
+    bodyPivot.add(lowerBody);
+
+    // Sculpted long muscle hood (+Z front)
+    const hood = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.08, 0.56), peitoralMat);
+    hood.position.set(0, 0.375, 0.46);
+    hood.rotation.x = 0.03;
+    tagMeshRegion(hood, 'peitoral', 'metal');
+    bodyPivot.add(hood);
+
+    // Fastback trunk (-Z rear)
+    const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.08, 0.42), peitoralMat);
+    trunk.position.set(0, 0.37, -0.54);
+    trunk.rotation.x = -0.04;
+    tagMeshRegion(trunk, 'peitoral', 'metal');
+    bodyPivot.add(trunk);
+
+    // Roof cabin
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.22, 0.56), peitoralMat);
+    cabin.position.set(0, 0.47, -0.05);
+    tagMeshRegion(cabin, 'peitoral', 'metal');
+    bodyPivot.add(cabin);
+
+    // Front windshield & rear window
+    const windshield = new THREE.Mesh(new THREE.BoxGeometry(0.60, 0.18, 0.06), glassMat);
+    windshield.position.set(0, 0.45, 0.22);
+    windshield.rotation.x = -0.52;
+    tagMeshRegion(windshield, 'barriga', 'gem');
+    const rearGlass = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.18, 0.06), glassMat);
+    rearGlass.position.set(0, 0.45, -0.34);
+    rearGlass.rotation.x = 0.62;
+    tagMeshRegion(rearGlass, 'barriga', 'gem');
+    const sideGlass = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.14, 0.44), glassMat);
+    sideGlass.position.set(0, 0.46, -0.05);
+    tagMeshRegion(sideGlass, 'barriga', 'gem');
+    bodyPivot.add(windshield, rearGlass, sideGlass);
+
+    // Chrome front grille & front/rear bumpers
+    const grille = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.12, 0.05), detalhesMat);
+    grille.position.set(0, 0.25, 0.78);
+    tagMeshRegion(grille, 'detalhes', 'metal');
+    const frontBumper = new THREE.Mesh(new THREE.BoxGeometry(0.80, 0.075, 0.08), detalhesMat);
+    frontBumper.position.set(0, 0.15, 0.80);
+    tagMeshRegion(frontBumper, 'detalhes', 'metal');
+    const rearBumper = new THREE.Mesh(new THREE.BoxGeometry(0.80, 0.075, 0.08), detalhesMat);
+    rearBumper.position.set(0, 0.15, -0.80);
+    tagMeshRegion(rearBumper, 'detalhes', 'metal');
+    const sideTrimL = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.025, 1.48), detalhesMat);
+    sideTrimL.position.set(-0.385, 0.26, 0);
+    tagMeshRegion(sideTrimL, 'detalhes', 'metal');
+    const sideTrimR = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.025, 1.48), detalhesMat);
+    sideTrimR.position.set(0.385, 0.26, 0);
+    tagMeshRegion(sideTrimR, 'detalhes', 'metal');
+    bodyPivot.add(grille, frontBumper, rearBumper, sideTrimL, sideTrimR);
+
+    // Dual headlights & taillights
+    for (const dir of [-1, 1]) {
+      for (const offset of [0.22, 0.30]) {
+        const hl = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.04, 12), headlightMat);
+        hl.rotation.x = Math.PI / 2;
+        hl.position.set(dir * offset, 0.27, 0.79);
+        tagMeshRegion(hl, 'acessorios', 'gem');
+        bodyPivot.add(hl);
+      }
+      const tl = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.05, 0.04), taillightMat);
+      tl.position.set(dir * 0.26, 0.26, -0.79);
+      tl.userData = { skipStyleOverride: true, noOutline: true, regionKey: 'detalhes', materialRole: 'gem' };
+      const mirror = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.04, 0.05), detalhesMat);
+      mirror.position.set(dir * 0.41, 0.40, 0.18);
+      tagMeshRegion(mirror, 'detalhes', 'metal');
+      const exhaust = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.12, 8), detalhesMat);
+      exhaust.rotation.x = Math.PI / 2;
+      exhaust.position.set(dir * 0.22, 0.10, -0.82);
+      tagMeshRegion(exhaust, 'detalhes', 'metal');
+      bodyPivot.add(tl, mirror, exhaust);
+    }
+
+    // 4 spinning wheels with chrome rims
+    const wheelCoords: Array<[number, number]> = [
+      [-0.38, 0.48],
+      [0.38, 0.48],
+      [-0.38, -0.48],
+      [0.38, -0.48]
+    ];
+    for (const [wx, wz] of wheelCoords) {
+      const wPivot = new THREE.Group();
+      wPivot.position.set(wx, 0.15, wz);
+      const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.10, segs), calcadoMat);
+      tire.rotation.z = Math.PI / 2;
+      tagMeshRegion(tire, 'calcado', 'leather');
+      const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.088, 0.088, 0.108, 12), detalhesMat);
+      rim.rotation.z = Math.PI / 2;
+      tagMeshRegion(rim, 'detalhes', 'metal');
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.114, 10), peitoralMat);
+      cap.rotation.z = Math.PI / 2;
+      tagMeshRegion(cap, 'peitoral', 'metal');
+      wPivot.add(tire, rim, cap);
+      bodyPivot.add(wPivot);
+      wheelPivots.push(wPivot);
+    }
   }
 
-  groundAndNormalizeGroup(root, 1.85);
+  groundAndNormalizeGroup(root, presetId === 'impala_1967' ? 1.72 : 1.85);
   applyVisualStyleAndRegionColors(root, estiloVisual, mergedColors, lowDetail);
   enableShadows(root);
 
@@ -679,6 +1054,7 @@ export function buildPresetPieceModel(
     rightLeg: rightLegPivot,
     leftArm: leftArmPivot,
     rightArm: rightArmPivot,
+    wheelPivots: wheelPivots.length > 0 ? wheelPivots : undefined,
     baseY: bodyPivot.position.y
   };
 
@@ -1514,6 +1890,7 @@ declare global {
 if (typeof window !== 'undefined') {
   window.Legado3D = {
     PRESET_CATALOG,
+    THEMATIC_CHARACTER_CATALOG,
     VISUAL_STYLE_CATALOG,
     CLOTHING_PATTERN_CATALOG,
     REGION_LABELS_PT,
@@ -1530,7 +1907,10 @@ if (typeof window !== 'undefined') {
     applyClassPassStartBonus,
     applyClassBailCost,
     BOARD_THEME_CATALOG,
+    BOARD_CARD_DECK_PRESETS,
     createBoardFromThemePreset,
+    createDefaultCardDeckForTheme,
+    resizeCustomBoardTiles,
     validateCustomBoardConfig,
     computeFlexibleBoardGrid,
     addTileToCustomBoard,
